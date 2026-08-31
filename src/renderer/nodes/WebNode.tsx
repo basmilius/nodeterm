@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconClose } from '../components/icons'
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import type { CanvasNode } from '../state/workspace'
@@ -207,7 +208,7 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
           title="Close"
           onClick={() => deleteElements({ nodes: [{ id }] })}
         >
-          ×
+          <IconClose />
         </button>
       </div>
 

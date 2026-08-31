@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { IconChevronDown, IconChevronRight, IconClose } from '../components/icons'
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import type { CanvasNode } from '../state/workspace'
@@ -64,7 +65,7 @@ export function LoopNode({ id, data, selected }: NodeProps<CanvasNode>) {
             toggle()
           }}
         >
-          {expanded ? '▾' : '▸'}
+          {expanded ? <IconChevronDown /> : <IconChevronRight />}
         </button>
         <span className="loop-node__dot" />
         <span className="loop-node__type">{label}</span>
@@ -80,7 +81,7 @@ export function LoopNode({ id, data, selected }: NodeProps<CanvasNode>) {
           title="Dismiss card (does not remove the job)"
           onClick={dismiss}
         >
-          ×
+          <IconClose />
         </button>
       </div>
       {(task || schedule) && !expanded && <div className="loop-node__task">{task || schedule}</div>}

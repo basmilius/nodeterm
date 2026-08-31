@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconClose } from './icons'
 import type { PtyPressure } from '@shared/types'
 import { isMacPlatform } from '../../shared/platform-utils'
 
@@ -129,7 +130,7 @@ export function PtyPressureBanner({
         title="Dismiss"
         onClick={() => setDismissed({ level: reading.level, seq: state!.seq })}
       >
-        ✕
+        <IconClose />
       </button>
     </div>
   )

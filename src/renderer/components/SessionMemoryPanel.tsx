@@ -10,6 +10,7 @@
 //   3. Every row is rendered. A cap would have to announce itself.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { IconReload } from './icons'
 import type { AgentState } from '@shared/agents/normalize'
 import { formatBytes } from '@shared/fsLimits'
 import { useAgentStatus } from '../state/agentStatus'
@@ -262,7 +263,7 @@ export function SessionMemoryPanel({
             disabled={loading}
             onClick={sweep}
           >
-            ⟳
+            <IconReload />
           </button>
         )}
       </div>

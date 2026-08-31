@@ -5,10 +5,13 @@ interface TooltipProps {
   label: string
   children: ReactNode
   delay?: number
+  /** Which side of the trigger the bubble opens on. Chrome that hugs the bottom of the window (the
+   *  dock) must open upward: below it, the bubble lands off-screen. */
+  placement?: 'top' | 'bottom'
 }
 
 /** A custom styled tooltip (portal, fixed-positioned) shown on hover after a short delay. */
-export function Tooltip({ label, children, delay = 350 }: TooltipProps) {
+export function Tooltip({ label, children, delay = 350, placement = 'bottom' }: TooltipProps) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -17,7 +20,10 @@ export function Tooltip({ label, children, delay = 350 }: TooltipProps) {
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       const r = el.getBoundingClientRect()
-      setPos({ x: r.left + r.width / 2, y: r.bottom + 6 })
+      setPos({
+        x: r.left + r.width / 2,
+        y: placement === 'top' ? r.top - 6 : r.bottom + 6
+      })
     }, delay)
   }
 
@@ -31,7 +37,10 @@ export function Tooltip({ label, children, delay = 350 }: TooltipProps) {
       {children}
       {pos &&
         createPortal(
-          <div className="tooltip" style={{ left: pos.x, top: pos.y }}>
+          <div
+            className={`tooltip${placement === 'top' ? ' tooltip--top' : ''}`}
+            style={{ left: pos.x, top: pos.y }}
+          >
             {label}
           </div>,
           document.body
