@@ -289,7 +289,9 @@ body,
 .tabbar__tabs {
   display: flex;
   align-items: stretch;
-  gap: 2px;
+  /* No gap: the active tab's side hairlines ARE the seams, and a strip of bar showing between two
+     tabs reads as a segmented control again — the thing this replaced. */
+  gap: 0;
   align-self: stretch;
   padding: 0;
   overflow-x: auto;
@@ -334,12 +336,21 @@ body,
 /* The two side hairlines that cut the tab out of the bar, drawn as an inset shadow so they cost
    no layout. Sides ONLY: a top edge would draw a lid on a shape whose whole point is that it is
    open into the canvas below. Load-bearing in LIGHT, where `--canvas-bg` and `--panel` are one
-   value apart and the fill alone would be invisible — hence in both themes, not just that one. */
+   value apart and the fill alone would be invisible — hence in both themes, not just that one.
+
+   FOUR shadows, not two, so these edges render as the SAME colour as `.tabbar::after`. `--border`
+   is an alpha (0.1 dark / 0.14 light), and the bar's separator composites it over `--panel` while
+   these edges sit over `--canvas-bg` — which in dark is #000 against #282828, so the identical
+   token painted two grades darker. A box-shadow list paints first-on-top, so the `--panel` pair
+   is listed LAST to sit behind as an opaque ground and the `--border` pair lands on it exactly as
+   it does on the bar. Cheaper than a resolved token, which would have to restate the alpha per
+   theme and drift from `--border` the first time one of them is tuned. */
 .tab.active::after {
   content: '';
   position: absolute;
   inset: 0;
-  box-shadow: inset 1px 0 0 var(--border), inset -1px 0 0 var(--border);
+  box-shadow: inset 1px 0 0 var(--border), inset -1px 0 0 var(--border),
+    inset 1px 0 0 var(--panel), inset -1px 0 0 var(--panel);
   pointer-events: none;
 }
 
@@ -458,9 +469,11 @@ body,
   align-items: center;
   justify-content: center;
   align-self: center;
-  /* Load-bearing once the pill no longer has flex:1: without this a squeezed bar
-     shrinks the 28px + instead of scrolling the tabs. */
+  /* Load-bearing: without this a squeezed bar shrinks the 28px + instead of scrolling the tabs. */
   flex-shrink: 0;
+  /* Its own breathing room now the strip runs at `gap: 0` — "+" is a separate action, not the
+     next tab in the row. */
+  margin-left: 8px;
   width: 28px;
   height: 28px;
   background: transparent;
