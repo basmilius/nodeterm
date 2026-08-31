@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { IconClose } from './icons'
+import { IconArrowDown, IconArrowUp, IconClose } from './icons'
 
 /** Identical shape to SearchSnippet in useTerminalSearch.ts (imported by the consumer). */
 export interface FindBarSnippet {
@@ -64,7 +64,7 @@ export function FindBar({
           onClick={onPrev}
           disabled={!matchCount}
         >
-          ↑
+          <IconArrowUp />
         </button>
         <button
           type="button"
@@ -74,7 +74,7 @@ export function FindBar({
           onClick={onNext}
           disabled={!matchCount}
         >
-          ↓
+          <IconArrowDown />
         </button>
         <button
           type="button"

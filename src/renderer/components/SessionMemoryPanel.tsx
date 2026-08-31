@@ -10,7 +10,7 @@
 //   3. Every row is rendered. A cap would have to announce itself.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { IconReload } from './icons'
+import { IconClose, IconReload } from './icons'
 import type { AgentState } from '@shared/agents/normalize'
 import { formatBytes } from '@shared/fsLimits'
 import { useAgentStatus } from '../state/agentStatus'
@@ -209,7 +209,7 @@ export function SessionMemoryPanel({
               aria-label={`End ${v.title}`}
               onClick={() => onKillSession(v.row.nodeId, v.orphan)}
             >
-              ×
+              <IconClose />
             </button>
             {v.row.childCount > 0 && (
               // "child processes", NOT "MCP servers": `pane_pid` is the pane's SHELL, so the count

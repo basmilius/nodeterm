@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconClose } from './icons'
 import type { CommandId } from '@shared/keybindings'
 import { shortcutCaptureCopy } from './shortcutCaptureCopy'
 
@@ -65,7 +66,7 @@ export function ShortcutCaptureBanner({
         Open Shortcuts
       </button>
       <button className="announce-banner__close" title="Dismiss" onClick={() => setCurrent(null)}>
-        ✕
+        <IconClose />
       </button>
     </div>
   )
