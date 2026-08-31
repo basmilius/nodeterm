@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { IconClose } from './icons'
 
 /** Identical shape to SearchSnippet in useTerminalSearch.ts (imported by the consumer). */
 export interface FindBarSnippet {
@@ -82,7 +83,7 @@ export function FindBar({
           aria-label="Close search"
           onClick={onClose}
         >
-          ✕
+          <IconClose />
         </button>
       </div>
       {current && (

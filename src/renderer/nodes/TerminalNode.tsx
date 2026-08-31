@@ -128,7 +128,18 @@ import {
 import { shouldAutoWake, shouldColdResume } from '../terminal/hibernation-policy'
 import { WakeInputBuffer } from '../terminal/wake-input-buffer'
 import { FindBar } from '../components/FindBar'
-import { IconSearch, IconChat, IconMic, IconReload, IconEye, IconEyeOff, IconGrid } from '../components/icons'
+import {
+  IconSearch,
+  IconChat,
+  IconMic,
+  IconReload,
+  IconEye,
+  IconEyeOff,
+  IconGrid,
+  IconChevronDown,
+  IconChevronRight,
+  IconClose
+} from '../components/icons'
 import { NodeLabels } from '../components/kanban/NodeLabels'
 import { Tooltip } from '../components/Tooltip'
 import { useTerminalSearch } from '../terminal/useTerminalSearch'
@@ -4676,7 +4687,7 @@ export function TerminalNode({
 
       <div className="term-node__header">
         <button className="term-node__collapse" title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
-          {collapsed ? '▸' : '▾'}
+          {collapsed ? <IconChevronRight /> : <IconChevronDown />}
         </button>
         <button
           className="term-node__color"
@@ -5038,7 +5049,7 @@ export function TerminalNode({
             deleteElements({ nodes: [{ id }] })
           }}
         >
-          ×
+          <IconClose />
         </button>
       </div>
 
@@ -5160,7 +5171,7 @@ export function TerminalNode({
               title="Dismiss"
               aria-label="Dismiss"
             >
-              ×
+              <IconClose />
             </button>
           </div>
         )}

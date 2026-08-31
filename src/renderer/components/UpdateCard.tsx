@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconClose } from './icons'
 import type { UpdateProgress } from '@shared/types'
 
 // The full updater lifecycle as one status union, driving a fixed bottom-right card.
@@ -162,7 +163,7 @@ export function UpdateCard(): JSX.Element | null {
         )}
         {canDismiss && (
           <button className="update-card__icon" title="Dismiss" onClick={dismiss}>
-            ✕
+            <IconClose />
           </button>
         )}
       </div>
