@@ -4342,6 +4342,7 @@ export function TerminalNode({
     if (dwellRef.current) clearTimeout(dwellRef.current)
     setArmed(false)
     termRef.current?.focus()
+    useTerminalFocus.getState().remember(id)
     useAgentStatus.getState().setActive(id, true)
     useAgentStatus.getState().clearUnread(id)
     presence.reportFocus(id)
@@ -4374,6 +4375,7 @@ export function TerminalNode({
       }
       setArmed(false)
       termRef.current?.focus()
+      useTerminalFocus.getState().remember(id)
       useAgentStatus.getState().setActive(id, true)
       useAgentStatus.getState().clearUnread(id)
       // "I am working in this node" — the same signal the agent-status active flag uses, i.e. the
@@ -4494,6 +4496,7 @@ export function TerminalNode({
     // A paste came from THIS window, which already has it.
     if (opts.raiseWindow) window.nodeTerminal.focusWindow()
     term.focus()
+    useTerminalFocus.getState().remember(id)
     term.paste(paths.join(' ') + ' ')
     useAgentStatus.getState().setActive(id, true)
     presence.reportFocus(id)

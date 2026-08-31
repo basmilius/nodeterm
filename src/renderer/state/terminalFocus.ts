@@ -17,10 +17,25 @@ export const useTerminalFocus = create<{
   nodeId: string | null
   /** Bumped on every request so re-requesting the same node still fires a subscriber effect. */
   nonce: number
+  /**
+   * The last terminal that actually took the keyboard, kept AFTER it lost focus again.
+   *
+   * This is the memory the window-activation restore reads (`lib/focusRestore.ts`). It must
+   * deliberately survive a blur: the case it exists for is a pointer that left the node (a second
+   * display, issue #557), which blurs the terminal through `onBodyLeave`, followed by a Cmd+Tab
+   * out and back, where no pointer event is left to hand the keyboard over again. Clearing it on
+   * blur would forget exactly the terminal we want back. It is never cleared explicitly: a node
+   * that is gone or unmounted simply misses the request, the same fail-open as `request`.
+   */
+  lastNodeId: string | null
   /** Ask a node's terminal to take the keyboard now. */
   request(nodeId: string): void
+  /** Record that this node's terminal has the keyboard (called where it takes focus). */
+  remember(nodeId: string): void
 }>((set) => ({
   nodeId: null,
   nonce: 0,
-  request: (nodeId) => set((s) => ({ nodeId, nonce: s.nonce + 1 }))
+  lastNodeId: null,
+  request: (nodeId) => set((s) => ({ nodeId, nonce: s.nonce + 1 })),
+  remember: (nodeId) => set({ lastNodeId: nodeId })
 }))
