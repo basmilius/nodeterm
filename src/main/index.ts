@@ -17,6 +17,7 @@ import { writeFilesToClipboard } from './clipboard-files'
 import { pickProjectIcon } from './project-icon-upload'
 import { allowGuestNavigation } from './webview-nav'
 import { guestContextMenuTemplate } from './webview-context-menu'
+import { DevToolsWindows, isDevToolsWindow } from './devtools-window'
 import { BrowserControlLedger } from './browser-control-ledger'
 import {
   recordOpenProjectGrant,
@@ -633,6 +634,13 @@ let keepAwake: KeepAwakeTracker | undefined
 // lands here — see `registerBrowserGuest`.
 const browserGuests = new Map<number, BrowserGuest>()
 
+// DevTools for a browser/web node's guest, hosted in our own window so it floats over the app
+// instead of being taken fullscreen by macOS. See devtools-window.ts for the measurements.
+const devToolsWindows = new DevToolsWindows({
+  createWindow: (options) => new BrowserWindow(options),
+  platform: process.platform
+})
+
 // Node → live tail bookkeeping, so closing a node (× → pty:destroy) releases its file tailers.
 // Without this, a node closed mid-run never emits SessionEnd/PostToolUse, so context-tail (1s
 // poll) and subagent-tail (400ms poll) would keep stat/read-ing forever. Keyed by node id.
@@ -1033,10 +1041,18 @@ function createWindow(): BrowserWindow {
   // transition is async, so the hide waits for `leave-full-screen`; `leavingFullScreen`
   // keeps a second ⌘W during the transition from stacking another listener.
   let leavingFullScreen = false
+  // An inspector outlives neither the window it belongs to nor the app. This deliberately does
+  // NOT listen for the 'hide' EVENT: macOS fires it on a Space swipe too, so every inspector was
+  // torn down the moment the user swiped away. It is called at the two places where WE hide the
+  // window instead (see closeAction below), which is the only hide that means "the user put this
+  // window away". 'closed' is safe as an event; it only fires on real destruction, and on
+  // Windows/Linux a surviving host would keep `window-all-closed` from ever firing.
+  win.on('closed', () => devToolsWindows.closeAll())
   win.on('close', (e) => {
     const action = closeAction(process.platform, quitting, win.isFullScreen())
     if (action === 'hide') {
       e.preventDefault()
+      devToolsWindows.closeAll()
       win.hide()
       return
     }
@@ -1046,7 +1062,10 @@ function createWindow(): BrowserWindow {
         leavingFullScreen = true
         win.once('leave-full-screen', () => {
           leavingFullScreen = false
-          if (!win.isDestroyed() && !quitting) win.hide()
+          if (!win.isDestroyed() && !quitting) {
+            devToolsWindows.closeAll()
+            win.hide()
+          }
         })
         win.setFullScreen(false)
       }
@@ -1187,7 +1206,10 @@ app.whenReady().then(async () => {
           copyText: (text) => clipboard.writeText(text),
           copyImage: () => contents.copyImageAt(params.x, params.y),
           replaceMisspelling: (word) => contents.replaceMisspelling(word),
-          inspect: () => contents.inspectElement(params.x, params.y)
+          inspect: () => {
+            const title = contents.getTitle() || contents.getURL() || 'Guest page'
+            devToolsWindows.open(contents, `DevTools: ${title}`, { x: params.x, y: params.y })
+          }
         }
       )
       // `frame` is null once the frame navigated away or died; the menu still opens, just without
@@ -3637,7 +3659,10 @@ app.whenReady().then(async () => {
     if (existing) {
       existing.show()
       existing.focus()
-    } else if (BrowserWindow.getAllWindows().length === 0) {
+    } else if (BrowserWindow.getAllWindows().every(isDevToolsWindow)) {
+      // A DevTools host is not an app window. Counting one would leave a user whose renderer
+      // crashed with no way back: the dock icon would reopen nothing while its inspector sat
+      // there.
       createWindow()
     }
   })
