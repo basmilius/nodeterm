@@ -5,12 +5,12 @@ import { BrowserStartPage } from './BrowserStartPage'
 import { useBrowserHistory } from '../state/browserHistory'
 import { useDiscardWhenHidden, webviewAudible } from './useDiscardWhenHidden'
 import { DiscardedPlate } from './DiscardedPlate'
+import { reloadWebview, type ReloadableWebview } from './webviewReload'
 
 // Minimal typing for the Electron <webview> element methods/events we use.
-type WebviewEl = HTMLElement & {
+type WebviewEl = HTMLElement & ReloadableWebview & {
   goBack(): void
   goForward(): void
-  reload(): void
   stop(): void
   loadURL(url: string): void
   canGoBack(): boolean
@@ -242,7 +242,7 @@ export function BrowserSurface({
     // A navigation with an initiator: whatever it navigates to is not a restore echo.
     restoringNavRef.current = null
     locationRef.current = safe
-    if (safe === src) ref.current?.reload()
+    if (safe === src) reloadWebview(ref.current, false)
     else setSrc(safe)
   }
 
@@ -257,8 +257,8 @@ export function BrowserSurface({
         </button>
         <button
           className="browser-node__btn"
-          onClick={() => (loading ? ref.current?.stop() : ref.current?.reload())}
-          title={loading ? 'Stop' : 'Reload'}
+          onClick={(e) => (loading ? ref.current?.stop() : reloadWebview(ref.current, e.shiftKey))}
+          title={loading ? 'Stop' : 'Reload (Shift to bypass the cache)'}
         >
           {loading ? '✕' : '⟳'}
         </button>

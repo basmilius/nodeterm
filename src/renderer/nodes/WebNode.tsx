@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tooltip } from '../components/Tooltip'
-import { IconClose, IconOpenExternal } from '../components/icons'
+import { IconClose, IconOpenExternal, IconReload } from '../components/icons'
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import type { CanvasNode } from '../state/workspace'
 import { httpUrl } from './webUrl'
 import { useDiscardWhenHidden, webviewAudible, type AudibleWebview } from './useDiscardWhenHidden'
 import { DiscardedPlate } from './DiscardedPlate'
+import { reloadWebview, type ReloadableWebview } from './webviewReload'
 import { useWebviewKeepAlive } from '../state/webviewKeepAlive'
 
 /**
@@ -23,8 +24,8 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
   const filePath = (data.filePath as string) ?? ''
   const title = (data.title as string) || url || filePath.split('/').pop() || 'web'
   const rootRef = useRef<HTMLDivElement | null>(null)
-  /** The guest, for the audible check only — a local html page can hold a playing <video>. */
-  const wvRef = useRef<AudibleWebview | null>(null)
+  /** The guest: the audible check (a local html page can hold a playing <video>) and reload. */
+  const wvRef = useRef<(AudibleWebview & ReloadableWebview) | null>(null)
   // Memory saver — the same shared hook {@link BrowserSurface} uses: hidden long enough, the
   // <webview> is unmounted (its Chromium process exits) and rebuilt on reveal. `revive` is what
   // re-runs the source effect below, so the `nt-media://` grant is re-issued for a local file
@@ -103,6 +104,11 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
     }
   })
 
+  // One definition of "there is a guest right now", read by both the reload button and the body:
+  // the button must appear exactly when there is something to reload, and a second copy of the
+  // condition is what would let those two drift.
+  const live = !!src && !discarded && !restoring
+
   return (
     <div
       ref={rootRef}
@@ -124,6 +130,17 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
           {title}
         </span>
         <span className="term-node__spacer" />
+        {live && (
+          <Tooltip label="Reload (Shift to bypass the cache)">
+            <button
+              className="term-node__refresh"
+              aria-label="Reload"
+              onClick={(e) => reloadWebview(wvRef.current, e.shiftKey)}
+            >
+              <IconReload />
+            </button>
+          </Tooltip>
+        )}
         {url && (
           <Tooltip label="Open in browser">
             <button
@@ -153,11 +170,11 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
         <div className="editor-node__image nodrag nowheel">
           {discarded || restoring ? (
             <DiscardedPlate restoring={restoring} />
-          ) : src ? (
+          ) : live ? (
             // eslint-disable-next-line react/no-unknown-property
             <webview
               ref={(el) => {
-                wvRef.current = el as unknown as AudibleWebview | null
+                wvRef.current = el as unknown as (AudibleWebview & ReloadableWebview) | null
               }}
               src={src}
               style={{ width: '100%', height: '100%' }}
