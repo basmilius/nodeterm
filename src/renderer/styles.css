@@ -707,6 +707,43 @@ body,
   color: var(--muted);
 }
 
+/* Canvas lock menu — the dock's lock button opens a set of independent switches (pan, zoom,
+ * moving nodes, resizing nodes) rather than toggling one flag. Anchored over its own button
+ * instead of the dock's left edge, since the button sits mid-dock. */
+.dock-lock {
+  position: relative;
+  display: inline-flex;
+}
+
+.dock-menu--anchored {
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 210px;
+}
+
+/* Fixed-width slot so the labels line up whether or not the row is checked. */
+.dock-menu__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.dock-menu__check svg {
+  color: var(--accent);
+}
+
+.dock-menu__sep {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border);
+}
+
+.dock-btn.open:not(:disabled) {
+  background: var(--panel-header);
+}
+
 /* ---- Dictation overlay: bottom-center floating card above the Dock ---- */
 .dictation {
   position: fixed;

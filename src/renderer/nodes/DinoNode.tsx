@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tooltip } from '../components/Tooltip'
 import { IconClose } from '../components/icons'
-import { NodeResizer, useReactFlow, type NodeProps } from '@xyflow/react'
+import { useReactFlow, type NodeProps } from '@xyflow/react'
+import { CanvasNodeResizer } from './CanvasNodeResizer'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { useShallow } from 'zustand/react/shallow'
 import { type CanvasNode } from '../state/workspace'
@@ -95,7 +96,7 @@ export function DinoNode({ id, data, selected }: NodeProps<CanvasNode>) {
 
   return (
     <div className={`dino-node${selected ? ' selected' : ''}`} style={{ borderColor: data.color }}>
-      <NodeResizer minWidth={NODE_MIN_SIZES.dino.width} minHeight={NODE_MIN_SIZES.dino.height} isVisible={selected} color={data.color} />
+      <CanvasNodeResizer minWidth={NODE_MIN_SIZES.dino.width} minHeight={NODE_MIN_SIZES.dino.height} isVisible={selected} color={data.color} />
 
       <div className="dino-node__header" style={{ background: `${data.color}33` }}>
         <span className="term-node__color" style={{ background: data.color }} />

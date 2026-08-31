@@ -9,7 +9,14 @@ import { useSettings } from '../state/settings'
 import { useProjects } from '../state/projects'
 import { accountsForProject, sshAccountsHint } from '../state/workspace'
 import { CONTENT_ADD_ITEMS, contentAddItemsToDockRows, type AddHandlers } from '../lib/addMenuSpec'
-import { IconLock, IconUnlock } from './icons'
+import {
+  CANVAS_LOCK_ASPECTS,
+  isAllLocked,
+  isAnyLocked,
+  lockSummary
+} from '../lib/canvasLock'
+import { useCanvasLock } from '../state/canvasLock'
+import { IconCheck, IconLock, IconUnlock } from './icons'
 import { Tooltip } from './Tooltip'
 
 const isMac = /Mac/i.test(navigator.platform || navigator.userAgent)
@@ -46,9 +53,6 @@ interface DockProps {
   onZoomOut: () => void
   onDictate: () => void
   dictateActive: boolean
-  /** Viewport lock (pan/zoom); nodes stay movable. Transient (see Canvas.tsx). */
-  canvasLocked: boolean
-  onToggleLock: () => void
 }
 
 /**
@@ -83,11 +87,17 @@ export function Dock({
   onZoomIn,
   onZoomOut,
   onDictate,
-  dictateActive,
-  canvasLocked,
-  onToggleLock
+  dictateActive
 }: DockProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  // The lock menu stays open while its rows are toggled: it is a set of independent switches, and
+  // closing after each one would make locking two aspects a four-click job.
+  const [lockMenuOpen, setLockMenuOpen] = useState(false)
+  const canvasLock = useCanvasLock((s) => s.lock)
+  const toggleLockAspect = useCanvasLock((s) => s.toggle)
+  const toggleAllLocks = useCanvasLock((s) => s.toggleAll)
+  const anyLocked = isAnyLocked(canvasLock)
+  const allLocked = isAllLocked(canvasLock)
   // Which builtin's flyout submenu is open (at most one). A builtin earns a flyout only when it has
   // ≥1 inheriting custom agent (one with a `baseAgent` matching it); otherwise it stays a flat
   // button, byte-identical to before this nesting existed.
@@ -161,6 +171,7 @@ export function Dock({
   return (
     <>
       {menuOpen && <div className="dock-backdrop" onClick={() => setMenuOpen(false)} />}
+      {lockMenuOpen && <div className="dock-backdrop" onClick={() => setLockMenuOpen(false)} />}
 
       <div className="dock">
         {menuOpen && (
@@ -340,18 +351,42 @@ export function Dock({
             <FrameIcon />
           </button>
         </Tooltip>
-        <Tooltip
-          label={canvasLocked ? 'Unlock view (pan/zoom)' : 'Lock view (pan/zoom); nodes stay movable'}
-          placement="top"
-        >
-          <button
-            className={`dock-btn${canvasLocked ? ' active' : ''}`}
-            aria-label={canvasLocked ? 'Unlock view' : 'Lock view'}
-            onClick={onToggleLock}
-          >
-            {canvasLocked ? <IconLock /> : <IconUnlock />}
-          </button>
-        </Tooltip>
+        <div className="dock-lock">
+          {lockMenuOpen && (
+            <div className="dock-menu dock-menu--anchored">
+              <button
+                onClick={toggleAllLocks}
+                title={allLocked ? 'Unlock every gesture' : 'Lock every gesture below'}
+              >
+                <span className="dock-menu__check">{allLocked ? <IconCheck /> : null}</span>
+                <span>Lock everything</span>
+              </button>
+              <div className="dock-menu__sep" />
+              {CANVAS_LOCK_ASPECTS.map((aspect) => (
+                <button
+                  key={aspect.id}
+                  title={aspect.hint}
+                  onClick={() => toggleLockAspect(aspect.id)}
+                >
+                  <span className="dock-menu__check">
+                    {canvasLock[aspect.id] ? <IconCheck /> : null}
+                  </span>
+                  <span>{aspect.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <Tooltip label={lockSummary(canvasLock)} placement="top">
+            <button
+              className={`dock-btn${anyLocked ? ' active' : ''}${lockMenuOpen ? ' open' : ''}`}
+              aria-label="Canvas lock"
+              aria-expanded={lockMenuOpen}
+              onClick={() => setLockMenuOpen((v) => !v)}
+            >
+              {anyLocked ? <IconLock /> : <IconUnlock />}
+            </button>
+          </Tooltip>
+        </div>
         <Tooltip
           label={
             dictationOff

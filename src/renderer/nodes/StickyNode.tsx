@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Tooltip } from '../components/Tooltip'
 import { IconChevronDown, IconChevronRight, IconClose } from '../components/icons'
-import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
+import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react'
+import { CanvasNodeResizer } from './CanvasNodeResizer'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { COLLAPSED_HEIGHT, NODE_COLORS, type CanvasNode } from '../state/workspace'
 import { ColumnPill } from '../components/kanban/ColumnPill'
@@ -71,7 +72,7 @@ export function StickyNode({ id, data, selected }: NodeProps<CanvasNode>) {
       className={`sticky-node${selected ? ' selected' : ''}${collapsed ? ' collapsed' : ''}`}
       style={{ background: `${data.color}22`, borderColor: data.color }}
     >
-      <NodeResizer minWidth={NODE_MIN_SIZES.sticky.width} minHeight={NODE_MIN_SIZES.sticky.height} isVisible={selected && !collapsed} color={data.color} />
+      <CanvasNodeResizer minWidth={NODE_MIN_SIZES.sticky.width} minHeight={NODE_MIN_SIZES.sticky.height} isVisible={selected && !collapsed} color={data.color} />
 
       {/* Note-link handles: drag to/from a terminal node to attach this note as context. */}
       <Handle

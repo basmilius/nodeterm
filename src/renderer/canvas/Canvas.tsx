@@ -82,6 +82,7 @@ import { withNodeBoundary } from '../components/NodeBoundary'
 import { Dock } from '../components/Dock'
 import { TabBar } from '../components/TabBar'
 import { ContextMenu, type MenuItem } from '../components/ContextMenu'
+import { useCanvasLock } from '../state/canvasLock'
 import { CommandPalette, type Command } from '../components/CommandPalette'
 import {
   IconBranch,
@@ -98,7 +99,6 @@ import {
   IconGroup,
   IconJump,
   IconKanban,
-  IconLock,
   IconMarkdown,
   IconNote,
   IconPhone,
@@ -113,8 +113,7 @@ import {
   IconSwitch,
   IconTerminal,
   IconTrash,
-  IconUngroup,
-  IconUnlock
+  IconUngroup
 } from '../components/icons'
 import type { SettingsSectionId } from '../components/settings/nav'
 import { projectSectionId } from '../components/settings/project-settings-targets'
@@ -844,12 +843,17 @@ export function Canvas() {
     return () => clearTimeout(t)
   }, [notice])
   const [zoomPct, setZoomPct] = useState(100)
-  // Canvas lock (dock): freezes the viewport against GESTURES: pan (drag +
-  // scroll), zoom (pinch / Cmd+wheel / double-click), node dragging and edge connecting.
-  // Deliberate button clicks (dock fit/zoom, ⌘K fit) still work, matching React
-  // Flow's own lock convention. Transient by design: a lock that survives restart reads as
-  // "the app is frozen" to whoever opens it next.
-  const [canvasLocked, setCanvasLocked] = useState(false)
+  // Canvas lock (dock): four independent aspects rather than one flag — pan and zoom (the camera,
+  // which is all the old boolean froze), plus node dragging and node resizing. The dock button
+  // opens a menu over them with an "everything" row for the old one-click behavior.
+  // Deliberate button clicks (dock fit/zoom, ⌘K fit) still work, matching React Flow's own lock
+  // convention: the lock refuses GESTURES, not commands. The state lives in a store because the
+  // resize aspect is read by every node component; transient by design, see state/canvasLock.ts.
+  const canvasLock = useCanvasLock((s) => s.lock)
+  // Pulled out as primitives so the two native gesture listeners below re-bind only when THEIR
+  // aspect changes, not whenever any other one does.
+  const zoomLocked = canvasLock.zoom
+  const panLocked = canvasLock.pan
   /** SPACE is held: a left-drag pans instead of box-selecting, Figma-style (issue #86). */
   const [spacePan, setSpacePan] = useState(false)
 
@@ -3133,7 +3137,9 @@ export function Canvas() {
       : undefined
     const wheelLimiter = new WheelZoomBurstLimiter()
     const onWheel = (e: WheelEvent) => {
-      if (canvasLocked) return
+      // Only the ZOOM aspect: with zoom locked but pan free, a plain trackpad packet falls
+      // through to React Flow's own panOnScroll, which is what the user asked to keep.
+      if (zoomLocked) return
       const plainWheel = !e.ctrlKey && !e.metaKey
       if (plainWheel) {
         // The ancestor walk is the expensive part of this handler at ~120 Hz, so it is memoized
@@ -3172,7 +3178,7 @@ export function Canvas() {
       wrap.removeEventListener('wheel', onWheel, { capture: true })
       offGesture?.()
     }
-  }, [getViewport, setViewport, wheelZoom, wheelZoomSpeed, trackpadRouting, canvasLocked])
+  }, [getViewport, setViewport, wheelZoom, wheelZoomSpeed, trackpadRouting, zoomLocked])
 
   // Double-clicking EMPTY canvas pulls back to the overview zoom — the inverse of the node
   // double-click, which frames one node. A fixed zoom, not "the camera the last focus came from":
@@ -3186,7 +3192,7 @@ export function Canvas() {
     const wrap = flowWrapRef.current
     if (!wrap) return
     const onDoubleClick = (e: MouseEvent) => {
-      if (canvasLocked) return
+      if (zoomLocked) return
       if (!(e.target as HTMLElement | null)?.classList.contains('react-flow__pane')) return
       const { x, y, zoom } = getViewport()
       if (Math.abs(zoom - PANE_OVERVIEW_ZOOM) < 1e-3) return
@@ -3201,7 +3207,7 @@ export function Canvas() {
     }
     wrap.addEventListener('dblclick', onDoubleClick)
     return () => wrap.removeEventListener('dblclick', onDoubleClick)
-  }, [getViewport, setViewport, canvasLocked])
+  }, [getViewport, setViewport, zoomLocked])
 
   /** Flow-space point at the center of the visible canvas (for dock-added nodes). */
   const viewCenter = useCallback(() => {
@@ -11504,16 +11510,17 @@ export function Canvas() {
           // Shift joins the default Meta/Control: adding a frame to an existing selection is the
           // gesture "Add selection to group" is reached by, and Shift+click is what users try.
           multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
-          // The lock freezes the CAMERA only (pan/zoom) — nodes stay draggable, resizable and
-          // connectable: the point is "stop the map sliding under me", not "freeze my work".
+          // Each aspect gates its own prop. Selecting and connecting are never locked: the point
+          // is "stop the layout moving under me", not "freeze my work".
           panOnDrag={
-            canvasLocked
+            panLocked
               ? false
               : spacePan || settings.canvasDragMode === 'pan'
                 ? [0, 1]
                 : [1]
           }
-          panOnScroll={canvasLocked ? false : trackpadRouting || !wheelZoom}
+          panOnScroll={panLocked ? false : trackpadRouting || !wheelZoom}
+          nodesDraggable={!canvasLock.drag}
           zoomOnScroll={false}
           zoomOnPinch={false}
           // Off: a pane double-click is the overview-zoom gesture (see PANE_OVERVIEW_ZOOM) and a
@@ -12096,8 +12103,6 @@ export function Canvas() {
         onZoomOut={() => zoomOut({ duration: 150 })}
         onDictate={toggleDictation}
         dictateActive={dictationOpen}
-        canvasLocked={canvasLocked}
-        onToggleLock={() => setCanvasLocked((v) => !v)}
       />
 
       {/* Focus mode surface (issue #78). ALWAYS mounted so the reparent target exists before the

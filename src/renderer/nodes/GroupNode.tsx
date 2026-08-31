@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconClose } from '../components/icons'
-import { NodeResizer, useReactFlow, type NodeProps } from '@xyflow/react'
+import { useReactFlow, type NodeProps } from '@xyflow/react'
+import { CanvasNodeResizer } from './CanvasNodeResizer'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { NODE_COLORS, ungroupNodes, type CanvasNode } from '../state/workspace'
 import { useProjects } from '../state/projects'
@@ -156,7 +157,7 @@ export function GroupNode({ id, data, selected }: NodeProps<CanvasNode>) {
         boxShadow: selected ? `0 0 0 1.5px ${data.color}` : undefined
       }}
     >
-      <NodeResizer
+      <CanvasNodeResizer
         minWidth={NODE_MIN_SIZES.group.width}
         minHeight={NODE_MIN_SIZES.group.height}
         isVisible={selected}

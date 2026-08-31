@@ -237,9 +237,21 @@ project's nodes only.** The contract:
   inactive project row switches, the active one toggles its own (now persisted) collapse — and
   every write **prunes** keys that no longer address a live project/frame (`pruneCollapsedItems` /
   `liveCollapseKeys`), because settings.json is forever and a canvas churns through group ids.
-- The dock's **canvas lock** freezes the CAMERA only (pan/zoom): nodes stay draggable,
-  resizable and connectable while locked — the point is "stop the map sliding", not "freeze
-  the work".
+- The dock's **canvas lock** is a SET of four independent aspects, not one flag — `pan`, `zoom`,
+  `drag` (moving nodes) and `resize` — opened as a menu on the dock's lock button, with a "Lock
+  everything" row for the old one-click behavior. It refuses GESTURES only: deliberate commands
+  (dock fit/zoom, ⌘K fit, the Controls buttons) still move the camera while pan/zoom are locked,
+  matching React Flow's own lock convention, and **selecting, connecting and editing are never
+  locked** — the point is "stop the layout moving under me", not "freeze the work". Pure logic +
+  labels live in `renderer/lib/canvasLock.ts`; the live state is the transient store
+  `renderer/state/canvasLock.ts` (nothing persisted, every launch starts unlocked — a lock that
+  survives a restart reads as "the app is frozen" to whoever opens it next). It is a STORE rather
+  than Canvas state because `resize` is read by every node kind: React Flow gives a node no prop
+  path from the canvas, so all eleven resizers go through ONE wrapper,
+  `nodes/CanvasNodeResizer.tsx`, which hides the handles when the aspect is on (no handles = no
+  resize, while the node stays selectable and interactive). The wheel handler gates on `zoom`
+  ALONE, deliberately: with zoom locked and pan free, a plain trackpad packet must fall through to
+  React Flow's `panOnScroll` instead of being swallowed.
 - Before any project switch / add / delete, `commitActiveToStore()` serializes the live
   React Flow nodes back into the store, so nothing is lost. Then disk is written.
 - Switching away unmounts the old project's `TerminalNode`s → their tmux clients detach but
