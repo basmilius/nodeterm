@@ -15,6 +15,11 @@ import { commandTooltip } from '../lib/keybindingOverrides'
 import { IconCanvasView, IconKanban, IconMoreVertical, IconPlus } from './icons'
 import { ProjectGlyph } from './ProjectGlyph'
 import {
+  derivedGlyphFor,
+  useProjectDerivedIdentities
+} from '../state/derivedProjectIdentity'
+import { effectiveProjectColor, effectiveProjectName } from '../lib/projectIdentity'
+import {
   ALL_PERMISSION_MODES,
   PERMISSION_MODE_LABELS,
   type AgentPermissionMode
@@ -86,6 +91,10 @@ export function TabBar({
   const allProjects = useProjects((s) => s.projects)
   // Closed projects are hidden here (reopen them from the start screen's "Recently closed").
   const projects = useMemo(() => allProjects.filter((p) => !p.closed), [allProjects])
+  // What each project's own folder declares (.idea/icon.svg, a favicon, .idea/.name). Fallback
+  // only: a project that carries its own icon/name never consults it.
+  const derivedIds = useMemo(() => projects.map((p) => p.id), [projects])
+  const derived = useProjectDerivedIdentities(derivedIds)
   const activeId = useProjects((s) => s.activeProjectId)
   const omniEnabled = useSettings((s) => isOmniKanbanEnabled(s.settings))
   const globalKanban = useViewMode((s) => s.globalKanban)
@@ -287,11 +296,16 @@ export function TabBar({
             const active = isGlobal ? (highlightedId ? p.id === highlightedId : p.id === activeId) : p.id === activeId
             const swimlaneHighlight = isGlobal && p.id === highlightedId
             const unreadCount = p.nodes.filter((n) => unreadSet.has(n.id)).length
+            const derivedIcon = derivedGlyphFor(!!p.icon, derived[p.id])
+            // Whether this tab paints a glyph at all — its own icon or the folder's.
+            const showsGlyph = !!p.icon || !!derivedIcon
+            // The icon's own accent, unless someone chose a colour for this project.
+            const shownColor = effectiveProjectColor(p, derived[p.id]?.color)
+            const shownName = effectiveProjectName(p, derived[p.id]?.name)
             return (
               <div
                 key={p.id}
                 className={`tab${active ? ' active' : ''}${swimlaneHighlight ? ' tab--swimlane-highlight' : ''}${p.unavailable ? ' unavailable' : ''}${dropId === p.id ? ' is-drop-before' : ''}`}
-                style={active ? { color: p.color } : undefined}
                 draggable={editingId !== p.id}
                 onDragStart={(e) => {
                   e.dataTransfer.effectAllowed = 'move'
@@ -336,7 +350,7 @@ export function TabBar({
                   p.unavailable
                     ? sessionForProject(p.id).source === 'local'
                       ? `${p.cwd ?? 'project'} is unavailable (folder missing or unreachable)`
-                      : `${p.name} disconnected, click to reconnect`
+                      : `${shownName} disconnected, click to reconnect`
                     : p.ssh
                       ? `${p.ssh.server.user}@${p.ssh.server.host}:${p.ssh.remoteCwd}`
                       : p.cwd || undefined
@@ -344,13 +358,20 @@ export function TabBar({
               >
                 <ProjectGlyph
                   icon={p.icon}
-                  color={active ? p.color : undefined}
-                  name={p.name}
+                  derived={derivedIcon}
+                  // Every tab, not only the active one: the colour is which PROJECT this is, and
+                  // the background + weight already say which tab is active.
+                  color={shownColor}
+                  name={shownName}
                   variant="dot"
-                  // With an icon set, the glyph needs a larger, tint-free box (--icon modifier);
-                  // without one it stays the plain 9px fallback dot, byte-identical to before.
-                  className={p.icon ? 'tab__dot tab__dot--icon' : 'tab__dot'}
+                  // With an icon set — the project's own or the folder's — the glyph needs a
+                  // larger, tint-free box (--icon modifier); without one it stays the plain 9px
+                  // fallback dot, byte-identical to before.
+                  className={showsGlyph ? 'tab__dot tab__dot--icon' : 'tab__dot'}
                 />
+                {/* The glyph took the fallback dot's place, so the project's colour rides its own
+                    small dot instead of tinting the label. See `.tab__accent`. */}
+                {showsGlyph && <span className="tab__accent" style={{ background: shownColor }} />}
                 {/* An SSH project looks identical to a local one once it is named, and the
                     difference matters: its terminals, git and file ops all run on another
                     machine. The chip says so at a glance; the tab title carries user@host. */}
@@ -374,7 +395,7 @@ export function TabBar({
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span className="tab__name">{p.name}</span>
+                  <span className="tab__name">{shownName}</span>
                 )}
 
                 {multiSession && <TabSessionLabel projectId={p.id} />}
@@ -470,7 +491,20 @@ export function TabBar({
             style={{ top: menuFlip.top, left: menuFlip.left }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button onClick={() => startRename(menuProject.id, menuProject.name)}>Rename</button>
+            {/* Seed the box with what the tab SHOWS: on a project still wearing its folder
+                basename that is the derived `.idea/.name`, and editing what you can read is the
+                only sane starting point. Committing writes a real name, which then outranks the
+                derived one by the rule in `effectiveProjectName`. */}
+            <button
+              onClick={() =>
+                startRename(
+                  menuProject.id,
+                  effectiveProjectName(menuProject, derived[menuProject.id]?.name)
+                )
+              }
+            >
+              Rename
+            </button>
             <button
               onClick={() => {
                 onSetFolder(menuProject.id)

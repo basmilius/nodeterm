@@ -3,6 +3,8 @@ import { AccountChip, useAccountChip } from './AccountChip'
 import { IconBellFilled, IconCircleCheck, IconClose } from './icons'
 import { NodeIconView } from './NodeIcon'
 import { ProjectGlyph } from './ProjectGlyph'
+import { derivedGlyphFor, useProjectDerivedIdentity } from '../state/derivedProjectIdentity'
+import { effectiveProjectColor } from '../lib/projectIdentity'
 import type { SessionRowVM } from '../lib/sessionList'
 import { useContextWindow } from '../state/contextWindow'
 import { useSessionNaming } from '../state/sessionNaming'
@@ -39,6 +41,9 @@ export function SessionRow({
   onDragEnd,
   stateAgeLabel
 }: SessionRowProps): JSX.Element {
+  // The project's folder-declared icon — the fallback under `row.projectIcon` (status mode only,
+  // where rows are flattened across projects and each one wears its project's mark).
+  const derived = useProjectDerivedIdentity(row.projectId)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(row.title)
   // Naming progress lives in a store keyed by node id, so the spinner persists across the row
@@ -114,7 +119,11 @@ export function SessionRow({
             // instead of the plain color mark.
             <ProjectGlyph
               icon={row.projectIcon}
-              color={row.projectColor}
+              derived={derivedGlyphFor(!!row.projectIcon, derived)}
+              color={effectiveProjectColor(
+                { color: row.projectColor ?? '', colorPicked: row.projectColorPicked },
+                derived.color
+              )}
               name={row.projectName ?? ''}
               variant="monogram"
               className="ss-mark ss-mark--project"

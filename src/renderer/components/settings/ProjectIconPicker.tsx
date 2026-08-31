@@ -7,6 +7,11 @@ import {
 } from '@shared/project-icon'
 import { cn } from '@renderer/ui/cn'
 import { ProjectGlyph } from '../ProjectGlyph'
+import {
+  useDerivedProjectIdentity,
+  useProjectDerivedIdentity
+} from '@renderer/state/derivedProjectIdentity'
+import type { RenderableDerivedIcon } from '@renderer/lib/projectIdentity'
 import EmojiPickerLazy from './EmojiPickerLazy'
 
 /**
@@ -34,6 +39,13 @@ export interface ProjectIconPickerProps {
   /** App's resolved appearance — forced onto the emoji picker rather than its own auto. */
   dark: boolean
   /**
+   * The file the project's colour is currently coming FROM, when it is the icon's own accent
+   * rather than `color` (see `effectiveProjectColor`). Renders as the same "Detected from …" line
+   * the icon has — without it the Color row is silently lying: none of its swatches is selected,
+   * because the colour in use is not one of them.
+   */
+  colorFrom?: string
+  /**
    * Whether this project's section is the one the user is actively viewing. The GitHub-avatar probe
    * is gated on this: a settings SEARCH mounts every matching project's picker (`sectionVisible`),
    * but only ONE is active — probing on bare mount would fire an uncached live API call per project.
@@ -46,9 +58,14 @@ export interface ProjectIconPickerProps {
 
 type Tab = 'avatar' | 'emoji' | 'lucide' | 'upload'
 
-/** Human label for whatever the project currently wears — the header subtitle, à la Orca. */
-function currentIconLabel(icon: ProjectIcon | undefined): string {
-  if (!icon) return 'Default (colour monogram)'
+/** Human label for whatever the project currently wears — the header subtitle, à la Orca. With no
+ *  icon of its own it names the file the folder declares, so "why does my project already have an
+ *  icon" has a visible answer (and Reset below re-reads it). */
+function currentIconLabel(
+  icon: ProjectIcon | undefined,
+  derived?: RenderableDerivedIcon | null
+): string {
+  if (!icon) return derived ? `Detected from ${derived.from}` : 'Default (colour monogram)'
   if (icon.type === 'emoji') return `${icon.emoji} emoji`
   if (icon.type === 'lucide') {
     const pretty = icon.name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -66,12 +83,17 @@ export function ProjectIconPicker({
   color,
   colors,
   dark,
+  colorFrom,
   active = true,
   onIcon,
   onColor
 }: ProjectIconPickerProps): React.JSX.Element {
   // Default to a functional, non-lazy tab: never Emoji (that would pull the ~500 KB chunk the
   // moment the picker mounts, defeating the whole lazy split).
+  // The folder's own icon: the picker's preview must show what the tab shows, and Reset means
+  // "back to the fallback", which is this when the folder declares one.
+  const { icon: derivedIcon } = useProjectDerivedIdentity(projectId)
+  const refreshDerived = useDerivedProjectIdentity((s) => s.refresh)
   const [tab, setTab] = useState<Tab>('lucide')
   const [uploadError, setUploadError] = useState<string | undefined>(undefined)
   // Whether this project resolves a GitHub avatar (origin + auth) — the Avatar tab shows only then.
@@ -174,12 +196,25 @@ export function ProjectIconPicker({
           className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/12 bg-white/5"
           aria-label="Current icon"
         >
-          <ProjectGlyph icon={icon} color={color} name={name} size={26} />
+          {/* Inset inside the well (32px in a 44px box): an icon drawn edge-to-edge collides with
+              the well's own rounded border and gets its corners clipped — the mark should sit IN
+              the frame, not be cropped by it. */}
+          <ProjectGlyph
+            icon={icon}
+            derived={icon ? null : derivedIcon}
+            color={color}
+            name={name}
+            size={26}
+            className="flex size-8 items-center justify-center"
+          />
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-semibold text-text">Icon</div>
-          <div className="mt-0.5 truncate text-[12px] text-muted" title={currentIconLabel(icon)}>
-            {currentIconLabel(icon)}
+          <div
+            className="mt-0.5 truncate text-[12px] text-muted"
+            title={currentIconLabel(icon, derivedIcon)}
+          >
+            {currentIconLabel(icon, derivedIcon)}
           </div>
         </div>
         <button
@@ -188,6 +223,9 @@ export function ProjectIconPicker({
           onClick={() => {
             setUploadError(undefined)
             onIcon(undefined)
+            // Re-read the folder: Reset hands the project back to its fallback, and the user may
+            // have dropped an `.idea/icon.svg` in since the one read this app run made.
+            void refreshDerived(projectId)
           }}
           disabled={!icon}
           aria-label="Remove icon"
@@ -200,6 +238,11 @@ export function ProjectIconPicker({
       {/* Colour swatches — the accent for this project's tab and monogram. Rounded squares (Orca). */}
       <div className="flex flex-col gap-1.5">
         <div className="text-[13px] font-semibold text-text">Color</div>
+        <div className="text-[12px] text-muted" title={colorFrom}>
+          {colorFrom
+            ? `Detected from ${colorFrom} \u2014 pick one to override it`
+            : 'Used for this project\u2019s dot and monogram'}
+        </div>
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Color">
           {colors.map((c) => (
             <button

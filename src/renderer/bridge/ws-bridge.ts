@@ -294,6 +294,13 @@ export function buildRealApi(
       client.request(IPC.workspaceProjectFileState, folder) as ReturnType<
         WorkspaceApi['projectFileState']
       >,
+    // REAL: registerProjectIconDeriveIpc runs on this shell too (src/server/handlers/index.ts), so
+    // a browser project wearing `.idea/icon.svg` looks like it does on the desktop. Its SSH leg is
+    // absent there by construction — the Server Edition has no SSH projects.
+    deriveIdentity: (projectId, opts) =>
+      client.request(IPC.workspaceDeriveIdentity, projectId, opts) as ReturnType<
+        WorkspaceApi['deriveIdentity']
+      >,
     // REAL: core broadcasts IPC.workspaceMigrated after a v2→v3 migration (workspace-store.ts).
     onMigrated: (cb) => client.subscribe(IPC.workspaceMigrated, cb as Listener),
     // REAL: core broadcasts IPC.workspaceCorruptRecovered from the load path (workspace-store.ts).

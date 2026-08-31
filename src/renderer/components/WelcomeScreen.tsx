@@ -3,6 +3,8 @@ import { IconClose } from './icons'
 import type { ProjectIcon } from '@shared/project-icon'
 import { filterClosedProjects } from '../lib/closedHistory'
 import { ProjectGlyph } from './ProjectGlyph'
+import { derivedGlyphFor, useProjectDerivedIdentities } from '../state/derivedProjectIdentity'
+import { effectiveProjectColor, effectiveProjectName } from '../lib/projectIdentity'
 
 /**
  * Rows before the "Recently closed" filter box appears (issue #506). `.welcome__recent-list` is
@@ -18,7 +20,15 @@ interface WelcomeScreenProps {
   /** Open the "Connect over SSH…" flow to create a project hosted on a remote server. */
   onConnectSsh: () => void
   /** Closed projects that can be reopened (id + display name + folder + icon/color). */
-  closedProjects?: { id: string; name: string; cwd?: string; color?: string; icon?: ProjectIcon }[]
+  closedProjects?: {
+    id: string
+    name: string
+    cwd?: string
+    color?: string
+    /** See `Project.colorPicked` — a chosen colour outranks the icon's own accent. */
+    colorPicked?: boolean
+    icon?: ProjectIcon
+  }[]
   /**
    * LIVE local `nt-*` session count per closed project id (one on-demand sweep — see Canvas).
    * A closed project parks its sessions invisibly (issue #442); this badge is what says they
@@ -60,6 +70,11 @@ export function WelcomeScreen({
     () => filterClosedProjects(closedProjects, query),
     [closedProjects, query]
   )
+  // Recently-closed rows show the same glyph/name rule the tab strip does: a project the user
+  // never gave an icon still shows what its folder declares. Only the rows the filter left on
+  // screen: the lookup reads the project's folder, and nobody is looking at the rest.
+  const derivedIds = useMemo(() => visibleClosed.map((p) => p.id), [visibleClosed])
+  const derived = useProjectDerivedIdentities(derivedIds)
 
   useEffect(() => {
     if (!onClose) return
@@ -197,13 +212,19 @@ export function WelcomeScreen({
               >
                 <ProjectGlyph
                   icon={p.icon}
-                  color={p.color}
-                  name={p.name}
+                  derived={derivedGlyphFor(!!p.icon, derived[p.id])}
+                  color={effectiveProjectColor(
+                    { color: p.color ?? '', colorPicked: p.colorPicked },
+                    derived[p.id]?.color
+                  )}
+                  name={effectiveProjectName(p, derived[p.id]?.name)}
                   variant="monogram"
                   size={15}
                   className="welcome__recent-mark"
                 />
-                <span className="welcome__recent-name">{p.name}</span>
+                <span className="welcome__recent-name">
+                  {effectiveProjectName(p, derived[p.id]?.name)}
+                </span>
                 {p.cwd && <span className="welcome__recent-path">{p.cwd}</span>}
                 {(sessionCounts?.[p.id] ?? 0) > 0 && (
                   <span

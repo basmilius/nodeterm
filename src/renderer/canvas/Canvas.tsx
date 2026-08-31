@@ -13491,6 +13491,7 @@ export function Canvas() {
               name: p.name,
               cwd: p.cwd,
               color: p.color,
+              colorPicked: p.colorPicked,
               icon: p.icon
             }))}
             sessionCounts={closedSessionBadges ?? undefined}

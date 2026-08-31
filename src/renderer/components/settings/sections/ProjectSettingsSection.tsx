@@ -28,6 +28,9 @@ import { useSettingsSearch } from '../context'
 import { projectSectionId } from '../project-settings-targets'
 import { matchesQuery, type SettingsSearchEntry } from '../search'
 import { useProjectSettings } from '../useProjectSettings'
+import { IDEA_NAME_FILE } from '@shared/project-icon-derive'
+import { useProjectDerivedIdentity } from '@renderer/state/derivedProjectIdentity'
+import { effectiveProjectColor, effectiveProjectName } from '@renderer/lib/projectIdentity'
 
 /**
  * Persists an identity/defaults edit. The store setters (`renameProject`, `setProjectColor`,
@@ -177,9 +180,18 @@ function EditableProjectSection({
   const accounts = accountsForProject(claudeAccounts, project)
   const accountsHint = sshAccountsHint(project, accounts)
 
+  // What this project's own folder declares (.idea/.name, .idea/icon.svg, a favicon). The pane
+  // must show the values the TAB shows — a settings page that disagrees with the tab about a
+  // project's name is worse than no page at all.
+  const derived = useProjectDerivedIdentity(project.id)
+  const shownName = effectiveProjectName(project, derived.name)
+  const derivedNameActive = shownName !== project.name
+  const shownColor = effectiveProjectColor(project, derived.color)
+  const derivedColorActive = shownColor !== project.color
+
   // Editors commit on BLUR, never per keystroke: each commit is a disk write.
-  const [nameDraft, setNameDraft] = useState(project.name)
-  useEffect(() => setNameDraft(project.name), [project.name])
+  const [nameDraft, setNameDraft] = useState(shownName)
+  useEffect(() => setNameDraft(shownName), [shownName])
 
   const snapshot = settings.snapshot
   // A git-conflicted settings.json is left untouched for the user to resolve, so every editor of
@@ -189,8 +201,11 @@ function EditableProjectSection({
 
   const commitName = (): void => {
     const next = nameDraft.trim()
-    if (!next || next === project.name) {
-      setNameDraft(project.name)
+    // Compared against what the field SHOWS, not the stored name: with a derived name in the box,
+    // comparing to the stored one would make a blur — clicking anywhere — persist `.idea/.name`
+    // as a manual rename nobody typed.
+    if (!next || next === shownName) {
+      setNameDraft(shownName)
       return
     }
     useProjects.getState().renameProject(project.id, next)
@@ -200,7 +215,7 @@ function EditableProjectSection({
   return (
     <SettingsSection
       id={projectSectionId(project.id)}
-      title={project.name}
+      title={shownName}
       description={`Settings for this project only. Name, color and defaults live in ${project.ssh ? 'the project file on the server' : '.nodeterm/project.json'}, which is shared with anyone who has the repo.`}
       isActive={isActive}
       searchEntries={entries}
@@ -221,7 +236,11 @@ function EditableProjectSection({
       <SearchableRow {...ROWS.name}>
         <FieldRow
           label="Project name"
-          description="Shown on the tab and in the project switcher."
+          description={
+            derivedNameActive
+              ? `Detected from ${IDEA_NAME_FILE} — type a name here to override it.`
+              : 'Shown on the tab and in the project switcher.'
+          }
           htmlFor={`project-name-${project.id}`}
           control={
             <Input
@@ -233,7 +252,7 @@ function EditableProjectSection({
               onBlur={commitName}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur()
-                if (e.key === 'Escape') setNameDraft(project.name)
+                if (e.key === 'Escape') setNameDraft(shownName)
               }}
             />
           }
@@ -265,11 +284,12 @@ function EditableProjectSection({
           </div>
           <ProjectIconPicker
             projectId={project.id}
-            name={project.name}
+            name={shownName}
             icon={project.icon}
-            color={project.color}
+            color={shownColor}
             colors={NODE_COLORS}
             dark={appTheme === 'dark'}
+            colorFrom={derivedColorActive ? derived.icon?.from : undefined}
             // Only the section the user is actually viewing probes the (uncached, live) GitHub
             // avatar. During a settings SEARCH many sections are VISIBLE-but-not-active — gating
             // on `active` keeps a keyword like "avatar" from firing one live API call per project.

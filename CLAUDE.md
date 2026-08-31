@@ -414,6 +414,53 @@ project's nodes only.** The contract:
 - A project's `cwd` (folder picker, `dialog:select-folder`) is passed to terminal/Claude
   node factories so new terminals open there. **Folder ↔ project is deduped:** "Open folder…"
   reuses the existing project with that `cwd` (and its nodes) instead of creating a duplicate.
+- **Project identity is two layers: the user's pick, and what the FOLDER declares.** A project's
+  own `icon` (`ProjectIcon` — emoji / curated lucide glyph / bounded raster, `sanitizeProjectIcon`
+  in @shared/project-icon) and its `name` ride the git-shared `.nodeterm/project.json`. Underneath
+  sits a **derived** identity read from the folder itself (@shared/project-icon-derive): an ordered
+  candidate list (`.nodeterm/icon.*`, `.idea/icon.svg|png`, `.vscode/icon.*`, then t3code's favicon
+  list — the port of pingdotgg/t3code's ProjectFaviconResolver — then a `<link rel="icon">` scan of
+  `index.html` / `root.tsx` / `__root.tsx`) plus `.idea/.name`. Rules a refactor must not undo:
+  - **The user's pick always wins, and a derived value is NEVER persisted.** It is re-read from the
+    folder (cached per app run, TTL 5 min, on demand — never polled), so writing it back would push
+    one machine's reading of a repository into every clone. `ProjectGlyph`'s `derived` prop is
+    consulted only when `icon` is absent; the derived NAME applies only while `project.name` still
+    equals the folder basename (`effectiveProjectName`) — the moment the user renames, that is
+    their answer.
+  - **A derived icon is deliberately NOT a `ProjectIcon`.** The persisted union refuses
+    `image/svg+xml` (script surface in a git-shared, always-re-rendered value); the derived type is
+    separate so `.idea/icon.svg` can be shown without widening the stored-value rules. SVG travels
+    from core as TEXT and is sanitized in the renderer (`lib/svgIcon.ts`, DOMPurify svg profile)
+    before it becomes a data: URL inside an `<img>` — two independent guards.
+    **`ALLOWED_URI_REGEXP` is not "which attributes are URIs":** DOMPurify runs every non-URI-safe
+    attribute value through it, so narrowing it to "a fragment or a data: image" strips
+    `width="16"` / `viewBox` / `fill="url(#g)"` and leaves an empty shape. It is the default minus
+    the network schemes, and it has a test.
+  - **The icon also supplies the project's COLOUR** (@shared/icon-color): a project is handed a
+    palette colour at creation, before anything is known about what it looks like, which is how a
+    blue logo ended up beside a red dot. `effectiveProjectColor` prefers the icon's own dominant
+    colour — read from the SVG markup (`fill`/`stroke`/`stop-color`, gradients included) or, for a
+    raster icon, from pixels the RENDERER samples through a canvas (the one part that cannot be
+    pure; the scoring is shared so an SVG logo and its PNG favicon cannot disagree). Greys,
+    near-white and near-black are skipped (every logo has those), the vote is by paint area with
+    saturation as the tiebreak, and a too-dark winner is LIFTED to `ACCENT_MIN_LIGHTNESS` rather
+    than dropped — an unreadable 6px dot and no dot are both worse than a brightened one. No
+    colour found ⇒ null ⇒ the palette colour stands. **`Project.colorPicked` is the opt-out and
+    it is GIT-SHARED, not machine-local** (unlike `viewport`/`breadcrumbs`): `color` itself is
+    shared, so a teammate's deliberate pick must outrank the derived accent in every clone. Absent
+    = never chosen, which is what every pre-field project looks like and the safe reading (those
+    colours were assigned, not picked); `setProjectColor` sets it, and it is read `=== true`.
+  - **Type from MAGIC BYTES, never the extension** (a text placeholder at `favicon.ico` is common,
+    and an ICO type-2 is a CURSOR); every path — fixed candidate or scanned href — goes through
+    `isJailedRelativePath`, and the local reader re-checks after `realpath` so a symlinked
+    `favicon.png -> ~/.ssh/id_rsa` reads as missing; an oversized candidate is SKIPPED (next
+    candidate), never truncated.
+  - **"Could not look" is not "there is no icon"** — a dead ControlMaster, an unmounted folder and
+    a failed request all answer null and are NOT cached, so the icon appears the moment the project
+    connects. Surfaces: desktop full (SSH via the project's master, `core/project-icon-derive-remote.ts`
+    — one `exists` batch for the whole candidate list, tested under a real `/bin/sh`); Server Edition
+    local-only (same core service, no SSH leg by construction); relay tabs answer empty (the host's
+    project is not in this machine's index); mobile N/A.
 
 ## Terminal session continuity (tmux)
 

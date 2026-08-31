@@ -19,6 +19,7 @@ import { registerAgentEnvIpc } from '../core/agent-env-ipc'
 import { PtyManager } from '../core/pty-manager'
 import { registerCoreHandlers } from './handlers'
 import { registerGitHubIntegration } from '../core/github/integration'
+import { registerProjectIconDeriveIpc } from '../core/project-icon-derive-service'
 import { runGitHubCliCommand } from '../core/github/credentials'
 import {
   registerServerGitHubControl,
@@ -358,6 +359,17 @@ export async function startServer(
     run: runGitHubCliCommand
   })
   registerServerGitHubControl(platform, github.controller)
+
+  // The well-known icon/name a project's folder declares — same core service as desktop, minus the
+  // SSH leg: this shell has no SSH projects (terminals are local), so an SSH-ref project answers
+  // the empty identity rather than reaching for a master that does not exist here.
+  registerProjectIconDeriveIpc({
+    target: (projectId) => {
+      const info = workspaceStore.projectTargetInfo(projectId)
+      if (!info) return null
+      return info.ssh ? { remoteCwd: info.ssh.remoteCwd } : { cwd: info.cwd }
+    }
+  })
 
   // Board-log: same CorePlatform registrar as desktop, but the Server Edition has no SSH projects
   // (terminals are local), so the router only ever resolves a local folder cwd or unsupported —
