@@ -9,6 +9,7 @@
 // `openDirectoryPicker` promise wrapper, and `mountPickerRoot` wire it into `ws-bridge`.
 
 import { useCallback, useEffect, useState } from 'react'
+import { IconArrowUp } from '../components/icons'
 import { createRoot, type Root } from 'react-dom/client'
 import type { DirEntry } from '../../shared/types'
 
@@ -122,7 +123,7 @@ function DirectoryPicker({ mode, startDir, list, onDone }: PickerProps): React.R
             disabled={parent === null}
             title="Up one level"
           >
-            ↑
+            <IconArrowUp />
           </button>
           <span className="dir-picker__path" title={dir}>
             {dir}

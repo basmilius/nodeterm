@@ -378,13 +378,13 @@ export function Dock({
         <span className="dock-sep" />
 
         <Tooltip label="Zoom out" placement="top">
-          <button className="dock-btn dock-zoom-btn" aria-label="Zoom out" onClick={onZoomOut}>
+          <button className="dock-btn" aria-label="Zoom out" onClick={onZoomOut}>
             <MinusIcon />
           </button>
         </Tooltip>
         <span className="dock-zoom">{zoomPct}%</span>
         <Tooltip label="Zoom in" placement="top">
-          <button className="dock-btn dock-zoom-btn" aria-label="Zoom in" onClick={onZoomIn}>
+          <button className="dock-btn" aria-label="Zoom in" onClick={onZoomIn}>
             <PlusSmallIcon />
           </button>
         </Tooltip>
@@ -406,14 +406,14 @@ function PlusIcon() {
 function UndoIcon() {
   return (
     <svg {...S}>
-      <path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" />
+      <path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H10" />
     </svg>
   )
 }
 function RedoIcon() {
   return (
     <svg {...S}>
-      <path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h2" />
+      <path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H14" />
     </svg>
   )
 }
@@ -433,14 +433,14 @@ function ArrowRightIcon() {
 }
 function PlusSmallIcon() {
   return (
-    <svg {...S} width={15} height={15}>
+    <svg {...S}>
       <path d="M12 5v14M5 12h14" />
     </svg>
   )
 }
 function MinusIcon() {
   return (
-    <svg {...S} width={15} height={15}>
+    <svg {...S}>
       <path d="M5 12h14" />
     </svg>
   )

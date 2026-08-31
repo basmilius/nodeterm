@@ -246,6 +246,15 @@ export const IconExternal = () => (
   </svg>
 )
 
+/** Box with an arrow leaving it: hand this off to another app (the system browser). Distinct from
+ *  IconExternal above, whose two corner brackets read as expand/fullscreen. */
+export const IconOpenExternal = () => (
+  <svg {...S}>
+    <path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" />
+    <path d="M14 4h6v6M20 4l-8 8" />
+  </svg>
+)
+
 export const IconAgent = () => (
   <svg {...S}>
     <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z" />
@@ -325,21 +334,96 @@ export const IconKanban = () => (
   </svg>
 )
 
+/** Four-point sparkle: the "name this with AI" action. Replaces a literal ✦, which sat on a text
+ *  baseline among the header's SVGs and could not be centered with them. */
+export const IconSparkle = () => (
+  <svg {...S}>
+    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+    <path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" />
+  </svg>
+)
+
+/** Arrow entering a folder: move this node's session into the worktree bound to its group. */
+export const IconMoveTo = () => (
+  <svg {...S}>
+    <path d="M4 7a2 2 0 0 1 2-2h3.5l1.5 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+    <path d="M9 13h6M12.5 10.5l2.5 2.5-2.5 2.5" />
+  </svg>
+)
+
+/** Solid play triangle: run a queued launch now, replay a loop iteration. Filled on purpose, the
+ *  way a transport control is drawn; an outlined triangle reads as a shape, not as "go". */
+export const IconPlay = () => (
+  <svg {...S} fill="currentColor" stroke="none">
+    <path d="M8 5.5v13l11-6.5z" />
+  </svg>
+)
+
+export const IconArrowUp = () => (
+  <svg {...S}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </svg>
+)
+
+export const IconArrowDown = () => (
+  <svg {...S}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </svg>
+)
+
+export const IconArrowLeft = () => (
+  <svg {...S}>
+    <path d="M19 12H5M11 6l-6 6 6 6" />
+  </svg>
+)
+
+export const IconArrowRight = () => (
+  <svg {...S}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+)
+
+/** Undo curve: discard a file's changes. Same shape as the dock's undo, which is the same idea. */
+export const IconUndo = () => (
+  <svg {...S}>
+    <path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H10" />
+  </svg>
+)
+
+/** Horizontal ellipsis: opens an overflow menu. */
+export const IconMore = () => (
+  <svg {...S} fill="currentColor" stroke="none">
+    <circle cx="5.5" cy="12" r="1.6" />
+    <circle cx="12" cy="12" r="1.6" />
+    <circle cx="18.5" cy="12" r="1.6" />
+  </svg>
+)
+
+/** Bare checkmark. IconCircleCheck is the badged variant and means something else: a completed
+ *  thing, not a selected one. */
+export const IconCheck = () => (
+  <svg {...S}>
+    <path d="M5 12.5l4.5 4.5L19 7" />
+  </svg>
+)
+
+/* On the shared 24 viewBox like every icon above, not a 16 one: two viewBoxes in one row cannot be
+   made to match by setting equal pixel sizes, because the shapes fill their boxes differently. */
 export const IconChevronDown = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 6.5L8 10.5l4-4" />
+  <svg {...S}>
+    <path d="M6 9.5l6 6 6-6" />
   </svg>
 )
 
 export const IconChevronRight = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6.5 4l4 4-4 4" />
+  <svg {...S}>
+    <path d="M9.5 6l6 6-6 6" />
   </svg>
 )
 
 export const IconClose = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <path d="M4 4l8 8M12 4l-8 8" />
+  <svg {...S}>
+    <path d="M6 6l12 12M18 6L6 18" />
   </svg>
 )
 

@@ -19,7 +19,7 @@ import {
 } from '../lib/sessionList'
 import { SessionRow } from './SessionRow'
 import { ProjectGlyph } from './ProjectGlyph'
-import { IconBellFilled, IconCircleCheck, IconPin } from './icons'
+import { IconBellFilled, IconCircleCheck, IconClose, IconPin } from './icons'
 import { useProjects } from '../state/projects'
 import { useSettings } from '../state/settings'
 import { useAgentStatus } from '../state/agentStatus'
@@ -470,7 +470,7 @@ export function SessionsSidebar(props: SessionsSidebarProps): JSX.Element | null
             <IconPin />
           </button>
           <button title="Close" onClick={props.onClose}>
-            ×
+            <IconClose />
           </button>
         </div>
       </div>

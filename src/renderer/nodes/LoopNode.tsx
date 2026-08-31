@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { IconChevronDown, IconChevronRight, IconClose } from '../components/icons'
+import { IconChevronDown, IconChevronRight, IconClose, IconPlay } from '../components/icons'
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import type { CanvasNode } from '../state/workspace'
@@ -73,7 +73,7 @@ export function LoopNode({ id, data, selected }: NodeProps<CanvasNode>) {
         {schedule && <span className="loop-node__sched">{schedule}</span>}
         {task && (
           <button className="loop-node__play" title="Run now (manual trigger)" onClick={trigger}>
-            ▶
+            <IconPlay />
           </button>
         )}
         <button
