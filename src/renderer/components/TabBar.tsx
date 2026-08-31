@@ -12,7 +12,7 @@ import { sessionCount, sessionForProject, useProjectSession } from '../session/s
 import { tabClickAction } from '../session/relay-tab'
 import { useMenuFlip } from '../ui/useMenuFlip'
 import { commandTooltip } from '../lib/keybindingOverrides'
-import { IconCanvasView, IconKanban } from './icons'
+import { IconCanvasView, IconChevronDown, IconKanban, IconPlus } from './icons'
 import { ProjectGlyph } from './ProjectGlyph'
 import {
   ALL_PERMISSION_MODES,
@@ -374,7 +374,7 @@ export function TabBar({
                       else openMenu(p.id, e.currentTarget)
                     }}
                   >
-                    ⌄
+                    <IconChevronDown />
                   </button>
                 )}
               </div>
@@ -382,7 +382,7 @@ export function TabBar({
           })}
 
           <button className="tab__add" title="New project" onClick={onOpenWelcome}>
-            +
+            <IconPlus />
           </button>
         </div>
       </div>

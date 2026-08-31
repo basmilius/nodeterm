@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconClose } from '../components/icons'
 import { NodeResizer, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { useShallow } from 'zustand/react/shallow'
@@ -117,7 +118,7 @@ export function DinoNode({ id, data, selected }: NodeProps<CanvasNode>) {
           title="Close"
           onClick={() => deleteElements({ nodes: [{ id }] })}
         >
-          ×
+          <IconClose />
         </button>
       </div>
 

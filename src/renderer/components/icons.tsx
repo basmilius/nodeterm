@@ -262,10 +262,10 @@ export const IconMic = () => (
 
 export const IconSessions = () => (
   <svg {...S}>
-    <rect x="3" y="4" width="18" height="5" rx="1.5" />
-    <rect x="3" y="11" width="18" height="5" rx="1.5" />
-    <line x1="6" y1="6.5" x2="6" y2="6.5" />
-    <line x1="6" y1="13.5" x2="6" y2="13.5" />
+    <rect x="3" y="4" width="18" height="6" rx="2" />
+    <rect x="3" y="14" width="18" height="6" rx="2" />
+    <circle cx="6.5" cy="7" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="6.5" cy="17" r="0.9" fill="currentColor" stroke="none" />
   </svg>
 )
 
@@ -283,23 +283,19 @@ export const IconCircleCheck = () => (
   </svg>
 )
 
-/* Filled padlocks (like the bell below): they live in the React Flow controls, whose
-   default icons are filled glyphs capped at 12px — a stroked lock collapses there. */
+/* Stroked padlocks: the canvas lock moved out of the React Flow controls (whose filled 12px
+   glyph set is why these used to be filled) into the dock, where every icon is an outline. */
 export const IconLock = () => (
-  <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" stroke="none">
-    <path
-      fillRule="evenodd"
-      d="M6 10V7a6 6 0 0 1 12 0v3h.5A2.5 2.5 0 0 1 21 12.5v7A2.5 2.5 0 0 1 18.5 22h-13A2.5 2.5 0 0 1 3 19.5v-7A2.5 2.5 0 0 1 5.5 10H6zm2.4 0h7.2V7a3.6 3.6 0 0 0-7.2 0v3zM12 14.2a1.8 1.8 0 0 0-.9 3.36V19a.9.9 0 0 0 1.8 0v-1.44a1.8 1.8 0 0 0-.9-3.36z"
-    />
+  <svg {...S}>
+    <rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5" />
+    <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
   </svg>
 )
 
 export const IconUnlock = () => (
-  <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" stroke="none">
-    <path
-      fillRule="evenodd"
-      d="M6 10V7a6 6 0 0 1 11.7-1.9l-2.3.8A3.6 3.6 0 0 0 8.4 7v3h10.1A2.5 2.5 0 0 1 21 12.5v7A2.5 2.5 0 0 1 18.5 22h-13A2.5 2.5 0 0 1 3 19.5v-7A2.5 2.5 0 0 1 5.5 10H6zM12 14.2a1.8 1.8 0 0 0-.9 3.36V19a.9.9 0 0 0 1.8 0v-1.44a1.8 1.8 0 0 0-.9-3.36z"
-    />
+  <svg {...S}>
+    <rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5" />
+    <path d="M8 10.5V7a4 4 0 0 1 7.7-1.5" />
   </svg>
 )
 
@@ -326,6 +322,24 @@ export const IconKanban = () => (
     <rect x="1.5" y="2.5" width="3.6" height="11" rx="1" />
     <rect x="6.2" y="2.5" width="3.6" height="7.5" rx="1" />
     <rect x="10.9" y="2.5" width="3.6" height="5" rx="1" />
+  </svg>
+)
+
+export const IconChevronDown = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 6.5L8 10.5l4-4" />
+  </svg>
+)
+
+export const IconChevronRight = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6.5 4l4 4-4 4" />
+  </svg>
+)
+
+export const IconClose = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+    <path d="M4 4l8 8M12 4l-8 8" />
   </svg>
 )
 

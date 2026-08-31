@@ -1,7 +1,7 @@
 /**
  * Fit-view geometry: place the canvas content in the largest chrome-free rectangle.
  *
- * The dock, minimap, controls, sidebars and banners all paint OVER the flow, so a plain `fitView`
+ * The dock, minimap, sidebars and banners all paint OVER the flow, so a plain `fitView`
  * tucks nodes underneath them. Reserving a fixed margin per edge is too blunt — it taxes content
  * that never reaches the offending panel (narrow content paying for a bottom-RIGHT minimap).
  *
@@ -18,7 +18,6 @@ export const CANVAS_CHROME_SELECTOR = [
   '[data-canvas-chrome]',
   '.dock',
   '.minimap',
-  '.react-flow__controls',
   // The bottom-left pill cluster (usage + system resources) opts in via `data-canvas-chrome` on its
   // wrapper, so the two pills are ONE obstacle rect instead of two overlapping inflated ones. The
   // wrapper's border box is exactly their union (they are its only, in-flow, children), and an

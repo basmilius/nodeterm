@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { IconClose } from './icons'
 import { createPortal } from 'react-dom'
 import { isHoldChord, shortcutKeyParts } from '@shared/shortcut'
 import type { CommandId } from '@shared/keybindings'
@@ -144,7 +145,7 @@ export function ShortcutsPanel({ onClose }: ShortcutsPanelProps) {
         <div className="shortcuts__head">
           <h2>Keyboard shortcuts</h2>
           <button className="drawer__close" onClick={onClose}>
-            ×
+            <IconClose />
           </button>
         </div>
         <div className="shortcuts__body">

@@ -6,8 +6,6 @@ import {
   applyEdgeChanges,
   Background,
   BackgroundVariant,
-  ControlButton,
-  Controls,
   MarkerType,
   MiniMap,
   ReactFlow,
@@ -86,8 +84,11 @@ import { TabBar } from '../components/TabBar'
 import { ContextMenu, type MenuItem } from '../components/ContextMenu'
 import { CommandPalette, type Command } from '../components/CommandPalette'
 import {
-  IconCollapse,
   IconBranch,
+  IconCanvasView,
+  IconClose,
+  IconCollapse,
+  IconDino,
   IconDuplicate,
   IconEditor,
   IconExplorer,
@@ -95,19 +96,18 @@ import {
   IconGear,
   IconGrid,
   IconGroup,
-  IconDino,
   IconJump,
   IconKanban,
-  IconCanvasView,
   IconLock,
   IconMarkdown,
-  IconReload,
-  IconPower,
   IconNote,
   IconPhone,
+  IconPower,
   IconProject,
+  IconReload,
   IconRemote,
   IconSave,
+  IconSearch,
   IconSelectAll,
   IconSessions,
   IconSwitch,
@@ -844,9 +844,9 @@ export function Canvas() {
     return () => clearTimeout(t)
   }, [notice])
   const [zoomPct, setZoomPct] = useState(100)
-  // Canvas lock (bottom-left Controls): freezes the viewport against GESTURES — pan (drag +
+  // Canvas lock (dock): freezes the viewport against GESTURES: pan (drag +
   // scroll), zoom (pinch / Cmd+wheel / double-click), node dragging and edge connecting.
-  // Deliberate button clicks (Controls +/−/fit, dock zoom, ⌘K fit) still work, matching React
+  // Deliberate button clicks (dock fit/zoom, ⌘K fit) still work, matching React
   // Flow's own lock convention. Transient by design: a lock that survives restart reads as
   // "the app is frozen" to whoever opens it next.
   const [canvasLocked, setCanvasLocked] = useState(false)
@@ -1287,8 +1287,8 @@ export function Canvas() {
     getNodesBounds
   } = useReactFlow()
 
-  // Single "fit everything" path for every fit-view entry point (dock button, the built-in
-  // Controls button, the ⌘K palette and the context menu) so they behave identically and there's
+  // Single "fit everything" path for every fit-view entry point (dock button, the ⌘K
+  // palette and the context menu) so they behave identically and there's
   // one place to tune. Solved per click against the CURRENT chrome layout and the CURRENT content
   // shape, so hiding the minimap or fitting a narrow column reclaims that space instead of paying
   // a fixed toll for panels the content never reaches.
@@ -11199,7 +11199,7 @@ export function Canvas() {
               title="Dismiss"
               onClick={() => setMigrationNote(null)}
             >
-              ✕
+              <IconClose />
             </button>
           </div>
         )}
@@ -11214,7 +11214,7 @@ export function Canvas() {
               title="Dismiss"
               onClick={() => setSyncNote(null)}
             >
-              ✕
+              <IconClose />
             </button>
           </div>
         )}
@@ -11229,7 +11229,7 @@ export function Canvas() {
               title="Dismiss"
               onClick={() => setCopyError(null)}
             >
-              ✕
+              <IconClose />
             </button>
           </div>
         )}
@@ -11248,7 +11248,7 @@ export function Canvas() {
               title="Dismiss"
               onClick={() => setNotice(null)}
             >
-              ✕
+              <IconClose />
             </button>
           </div>
         )}
@@ -11377,7 +11377,7 @@ export function Canvas() {
           title="Command palette"
           onClick={() => setPaletteOpen(true)}
         >
-          <span className="cluster-search__icon">⌕</span>
+          <IconSearch />
           {paletteChip && <span className="kbd">{paletteChip}</span>}
         </button>
         <button title={commandTooltip('Explorer', 'panel.explorer')} onClick={() => showExplorer('toggle')}>
@@ -11542,15 +11542,6 @@ export function Canvas() {
               mounted in the experimental 'shared' renderer mode; nothing about it exists for the
               default modes. */}
           {glyphLayerActive && <SharedGlyphLayer />}
-          <Controls showInteractive={false} position="bottom-left" onFitView={fitAll}>
-            <ControlButton
-              className={`canvas-lock-btn${canvasLocked ? ' locked' : ''}`}
-              title={canvasLocked ? 'Unlock view (pan/zoom)' : 'Lock view (pan/zoom) — nodes stay movable'}
-              onClick={() => setCanvasLocked((v) => !v)}
-            >
-              {canvasLocked ? <IconLock /> : <IconUnlock />}
-            </ControlButton>
-          </Controls>
           {/* Peer cursors live INSIDE <ReactFlow>: PresenceLayer uses ViewportPortal +
               useReactFlow, which throw outside the provider — and cursors are flow coordinates. */}
           <PresenceLayer />
@@ -12105,6 +12096,8 @@ export function Canvas() {
         onZoomOut={() => zoomOut({ duration: 150 })}
         onDictate={toggleDictation}
         dictateActive={dictationOpen}
+        canvasLocked={canvasLocked}
+        onToggleLock={() => setCanvasLocked((v) => !v)}
       />
 
       {/* Focus mode surface (issue #78). ALWAYS mounted so the reparent target exists before the

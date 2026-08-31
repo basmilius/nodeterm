@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconChevronDown, IconChevronRight, IconClose } from '../components/icons'
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { COLLAPSED_HEIGHT, NODE_COLORS, type CanvasNode } from '../state/workspace'
@@ -89,7 +90,7 @@ export function StickyNode({ id, data, selected }: NodeProps<CanvasNode>) {
 
       <div className="sticky-node__header" style={{ background: `${data.color}33` }}>
         <button className="term-node__collapse" title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
-          {collapsed ? '▸' : '▾'}
+          {collapsed ? <IconChevronRight /> : <IconChevronDown />}
         </button>
         <button
           className="term-node__color"
@@ -154,7 +155,7 @@ export function StickyNode({ id, data, selected }: NodeProps<CanvasNode>) {
           title="Close"
           onClick={() => deleteElements({ nodes: [{ id }] })}
         >
-          ×
+          <IconClose />
         </button>
       </div>
 

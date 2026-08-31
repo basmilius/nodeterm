@@ -237,7 +237,7 @@ project's nodes only.** The contract:
   inactive project row switches, the active one toggles its own (now persisted) collapse — and
   every write **prunes** keys that no longer address a live project/frame (`pruneCollapsedItems` /
   `liveCollapseKeys`), because settings.json is forever and a canvas churns through group ids.
-- The bottom-left **canvas lock** freezes the CAMERA only (pan/zoom): nodes stay draggable,
+- The dock's **canvas lock** freezes the CAMERA only (pan/zoom): nodes stay draggable,
   resizable and connectable while locked — the point is "stop the map sliding", not "freeze
   the work".
 - Before any project switch / add / delete, `commitActiveToStore()` serializes the live

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconClose } from '../components/icons'
 import { NodeResizer, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { NODE_COLORS, ungroupNodes, type CanvasNode } from '../state/workspace'
@@ -291,7 +292,7 @@ export function GroupNode({ id, data, selected }: NodeProps<CanvasNode>) {
                 title="Remove worktree"
                 onClick={() => worktreeActionHandler?.(id, 'remove')}
               >
-                ✕
+                <IconClose />
               </button>
             )}
           </div>
@@ -307,7 +308,7 @@ export function GroupNode({ id, data, selected }: NodeProps<CanvasNode>) {
           title="Remove group (keeps nodes)"
           onClick={ungroup}
         >
-          ×
+          <IconClose />
         </button>
       </div>
     </div>
