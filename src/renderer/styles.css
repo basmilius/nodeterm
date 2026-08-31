@@ -211,7 +211,6 @@ body,
   height: var(--tabbar-h);
   padding: 0 12px;
   background: var(--panel);
-  border-bottom: 1px solid var(--border);
   /* Above the canvas and the menu backdrop so tabs/inputs stay interactive. */
   z-index: 30;
   flex-shrink: 0;
@@ -225,6 +224,23 @@ body,
    pushing the logo in by 86px and taking the same 86px off the tab strip (issue #564). */
 :root[data-window-chrome='inset'] .tabbar {
   padding-left: 86px;
+}
+
+/* The separator between the bar and the canvas, as a pseudo-element rather than the bar's own
+   `border-bottom`: the ACTIVE tab has to break that line to read as a tab whose body IS the
+   canvas. It is z-index:auto, so the active tab's `z-index: 1` paints over the 1px it covers,
+   and the line still runs under every inactive tab and the bar's empty stretch. In light the two
+   surfaces are almost the same value (`--panel` #f3efe7 vs `--canvas-bg` #f4efe6), so this line
+   plus the active tab's own outline is the whole separation there. */
+.tabbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--border);
+  pointer-events: none;
 }
 
 /* Interactive elements inside the bar must not drag the window. */
@@ -255,29 +271,27 @@ body,
   letter-spacing: 0.2px;
 }
 
-/* Tabs as a single rounded pill of segments. The + is a sibling in `.tabbar__projects`
-   so it cannot scroll away with the tabs (issue #375). The wrapper is flex:1 and is
-   NOT in the no-drag list — it is the remaining title-bar drag region. Do not put
-   flex:1 on the pill itself: that inflates an empty capsule for every 2-tab window. */
+/* The + is a sibling of the strip so it cannot scroll away with the tabs (issue #375). The
+   wrapper is flex:1 and is NOT in the no-drag list — it is the remaining title-bar drag region. */
 .tabbar__projects {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 4px;
   flex: 1;
   /* Load-bearing (issue #375): a flex item's min-width defaults to `auto`, which resolves against
-     the pill's full content width — so with many tabs the wrapper refuses to shrink and shoves
+     the strip's full content width — so with many tabs the wrapper refuses to shrink and shoves
      the + past the window edge. Measured: 1280 px / 12 projects, + at x=1382 without this. */
   min-width: 0;
 }
+
+/* Browser-style tabs: the strip is the bar's floor, each tab runs its FULL height and the active
+   one is filled with the canvas colour so its body continues into the page below. */
 .tabbar__tabs {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 2px;
-  height: 34px;
-  padding: 3px;
-  background: rgba(var(--tint-rgb), 0.05);
-  border: 1px solid var(--border);
-  border-radius: 17px;
+  align-self: stretch;
+  padding: 0;
   overflow-x: auto;
   /* Scrollable but without the native scrollbar (foreign-looking in a title-bar tab strip);
      trackpad swipe / wheel still scroll, and the active tab is scrolled into view. */
@@ -293,22 +307,44 @@ body,
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 0 12px;
-  height: 100%;
-  border-radius: 14px;
+  padding: 0 14px;
+  /* Full height of the bar, with only the TOP corners rounded — the bottom edge is where the tab
+     meets its own content. */
+  border-radius: 10px 10px 0 0;
   color: var(--muted);
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.tab:hover {
+.tab:not(.active):hover {
   background: rgba(var(--tint-rgb), 0.05);
+  color: var(--text);
 }
 
 .tab.active {
-  background: rgba(var(--tint-rgb), 0.09);
+  /* THE tab look: the active tab is a hole in the bar showing the canvas behind it. */
+  background: var(--canvas-bg);
   font-weight: 600;
+  /* Neutral, never the project colour: the fill and the weight say which tab is active and
+     `.tab__dot` says which project it is, so tinting the label would say the same thing twice. */
+  color: var(--text);
+  /* Above `.tabbar::after`, so the tab's own bottom pixel replaces the separator line and the
+     fill runs uninterrupted into the canvas. */
+  z-index: 1;
+}
+
+/* A hairline around the tab's three outer edges, drawn as an inset shadow so it costs no layout
+   and cannot round differently from the fill. Load-bearing in LIGHT, where `--canvas-bg` and
+   `--panel` are one value apart and the fill alone would be invisible. */
+.tab.active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 var(--border), inset 1px 0 0 var(--border),
+    inset -1px 0 0 var(--border);
+  pointer-events: none;
 }
 
 /* In the all-projects board the highlighted tab follows the selected swimlane, not necessarily
@@ -397,22 +433,6 @@ body,
   padding: 2px 6px;
   width: 120px;
   outline: none;
-}
-
-.tab__board-toggle {
-  display: inline-flex;
-  align-items: center;
-  background: transparent;
-  border: none;
-  color: currentColor;
-  cursor: pointer;
-  line-height: 1;
-  padding: 2px 2px;
-  border-radius: 4px;
-  opacity: 0.55;
-}
-.tab__board-toggle:hover {
-  opacity: 1;
 }
 
 .tab__caret {
@@ -7769,7 +7789,7 @@ button.group-node__setup:disabled {
 .ss-rowdrop.is-drop-before::before { content: ''; position: absolute; top: -1px; left: 6px; right: 6px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
 /* Project reorder: vertical insertion line before the tab / horizontal line above the
    sidebar project header the dragged project will land before */
-.tab.is-drop-before::before { content: ''; position: absolute; left: -3px; top: 4px; bottom: 4px; width: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
+.tab.is-drop-before::before { content: ''; position: absolute; left: -3px; top: 8px; bottom: 8px; width: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
 .ss-group { position: relative; }
 .ss-group.is-drop-before::before { content: ''; position: absolute; top: -1px; left: 6px; right: 6px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; z-index: 1; }
 
