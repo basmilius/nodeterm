@@ -7798,7 +7798,25 @@ button.group-node__setup:disabled {
 .ss-rowdrop.is-drop-before::before { content: ''; position: absolute; top: -1px; left: 6px; right: 6px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
 /* Project reorder: vertical insertion line before the tab / horizontal line above the
    sidebar project header the dragged project will land before */
-.tab.is-drop-before::before { content: ''; position: absolute; left: -3px; top: 8px; bottom: 8px; width: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; }
+/* The insertion line, drawn INSIDE the tab it lands in front of. Two things it must not do:
+   hang outside the tab (at `left: -3px` the first tab's line fell outside `.tabbar__tabs`, which
+   is `overflow-x: auto` and clipped it — so the leftmost drop target showed nothing), and sit
+   under the ACTIVE tab, whose `z-index: 1` swallowed it whenever the target was the tab right
+   after it. Hence `left: 0` and z-index 2. */
+.tab.is-drop-before::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; z-index: 2; }
+
+/* The same line for "after the last tab", which has no tab to hang off. A real flex item rather
+   than a pseudo-element: the strip scrolls, and an absolutely positioned marker on a scroll
+   container drifts away from the end it is marking. The -1px side margins cancel its 2px width,
+   so the tabs do not shift when it appears. */
+.tab__dropline {
+  flex: 0 0 2px;
+  align-self: stretch;
+  margin: 8px -1px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
 .ss-group { position: relative; }
 .ss-group.is-drop-before::before { content: ''; position: absolute; top: -1px; left: 6px; right: 6px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; z-index: 1; }
 
