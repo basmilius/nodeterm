@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { isTopDialog, nextDialogId, popDialog, pushDialog } from '../dialog-stack'
-import { IconChat, IconMic, IconSearch } from '../icons'
+import { IconChat, IconClose, IconExternal, IconMaximize, IconMic, IconRestoreSize, IconSearch } from '../icons'
 import { ContextMeter } from '../ContextMeter'
 import { useAgentStatus } from '../../state/agentStatus'
 import { useCardPanel } from '../../state/cardPanel'
@@ -319,13 +319,13 @@ export function CardModal({ session, columnTitle, board, onChangeBoard, onClose,
             aria-pressed={maximized}
             onClick={() => setMaximized(!maximized)}
           >
-            {maximized ? '❐' : '⤢'}
+            {maximized ? <IconRestoreSize /> : <IconMaximize />}
           </button>
           <button className="kanban-modal__action" title="Open on canvas" onClick={onOpenCanvas}>
-            ↗
+            <IconExternal />
           </button>
           <button className="kanban-modal__action" title="Close" onClick={onClose}>
-            ✕
+            <IconClose />
           </button>
         </div>
         <CardMetaBar nodeId={session.id} board={board} onChange={onChangeBoard} />

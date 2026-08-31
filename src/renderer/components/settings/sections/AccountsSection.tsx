@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconClose } from '../../icons'
 import type { ClaudeAccount } from '@shared/types'
 import type { CodexAccount } from '@shared/codex-account'
 import { E_UNSUPPORTED } from '@shared/rpc'
@@ -419,7 +420,7 @@ export function AccountsSection({ isActive }: { isActive: boolean }): React.JSX.
                 aria-label="Remove Codex account"
                 onClick={() => setPendingRemoveCodex(account)}
               >
-                ×
+                <IconClose />
               </Button>
             </div>
           )
@@ -653,7 +654,7 @@ export function AccountsSection({ isActive }: { isActive: boolean }): React.JSX.
                     aria-label="Remove account"
                     onClick={() => setPendingRemove(account)}
                   >
-                    ×
+                    <IconClose />
                   </Button>
                 </div>
               </div>

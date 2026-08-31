@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconBellFilled, IconCircleCheck } from './icons'
+import { IconBellFilled, IconCircleCheck, IconClose } from './icons'
 import { ProjectGlyph } from './ProjectGlyph'
 import type { SessionRowVM } from '../lib/sessionList'
 import { useContextWindow } from '../state/contextWindow'
@@ -169,7 +169,7 @@ export function SessionRow({
               onClose()
             }}
           >
-            ×
+            <IconClose />
           </button>
         </div>
         {(row.projectName || row.cwd || row.sshHost || stateAgeLabel) && (

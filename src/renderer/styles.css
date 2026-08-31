@@ -588,11 +588,6 @@ body,
   margin: 0 4px;
 }
 
-.dock-zoom-btn {
-  width: 30px;
-  height: 30px;
-}
-
 .dock-zoom-wrap {
   position: relative;
   display: inline-flex;
@@ -1329,21 +1324,7 @@ body,
   flex-shrink: 0;
 }
 
-/* Maximize toggle (issue #399): a regular right-group header icon button, next to the close ×.
-   Same recipe as .term-node__refresh — the toggle is ordinary chrome, not a traffic light. */
-.term-node__maximize {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
 
-.term-node__maximize:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
-}
 
 .term-node__title {
   flex: 1;
@@ -1761,107 +1742,51 @@ body,
   transform: translate(-50%, -100%);
 }
 
-.term-node__ai {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  border-radius: 4px;
+
+
+/* Icon sizing for the boxes that are smaller than the shared 16px glyph. The icon set is one
+   family on one viewBox (see icons.tsx); where a button is tight, the BUTTON scales it down
+   rather than the icon carrying a second size of its own. */
+.tab__caret svg,
+.sessmem-row__kill svg,
+.welcome__recent-del svg {
+  width: 14px;
+  height: 14px;
 }
 
-.term-node__ai:hover:not(:disabled) {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
+.loop-node__expand svg,
+.subagent-node__expand svg,
+.ex-dls__dismiss svg,
+.term-node__stalecwd-dismiss svg,
+.node-tag button svg {
+  width: 12px;
+  height: 12px;
 }
 
-.term-node__ai:disabled {
-  opacity: 0.6;
-  cursor: default;
+/* Boxes smaller than the shared 16px glyph, scaled by the BUTTON (see icons.tsx: one family,
+   one viewBox). */
+.scm-iconbtn svg,
+.ss-row__close svg,
+.account-identity-check svg,
+.kanban-modal__action svg {
+  width: 13px;
+  height: 13px;
 }
 
-.term-node__move-worktree {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  border-radius: 4px;
-}
-
-.term-node__move-worktree:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
-}
-
-.term-node__search {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
-
-.term-node__search:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
-}
-
-.term-node__refresh {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
-
-.term-node__refresh:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
-}
-
-.term-node__mic {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
-
-.term-node__mic:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
-}
-
-.term-node__chat {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
-
-.term-node__chat:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
-}
-
-/* Every icon-only button in the terminal header shares ONE box: a 22px square with the icon
-   centered on both axes. They used to differ per button (padding 2px 4/5/6px on a text baseline),
-   which is what made the row read as misaligned. Buttons carrying TEXT (approve, queued-run, the
-   status pills, the title) deliberately keep their own shape. */
+/* ---- Node header actions ----
+   ONE recipe for every icon-only button in a node header (terminal, editor, diff, video, web,
+   browser, sticky, dino). Each of these used to carry its own copy of the same six declarations
+   plus a hand-typed hover colour; the copies had already drifted (collapse hovered grey where its
+   neighbours hovered blue, and the close button's red was not the --danger hue).
+   Buttons carrying TEXT (approve, queued-run, Save/Preview, the status pills, the title) keep
+   their own shape: a word needs room a 22px square does not have. */
 .term-node__collapse,
 .term-node__ai,
 .term-node__chat,
 .term-node__mic,
 .term-node__search,
 .term-node__refresh,
+.term-node__external,
 .term-node__maximize,
 .term-node__close,
 .term-node__move-worktree,
@@ -1870,31 +1795,59 @@ body,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
   padding: 0;
-  flex-shrink: 0;
-}
-
-.term-node__hide-fanout,
-.term-node__tidy-fanout {
   background: transparent;
   border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  padding: 2px 5px;
   border-radius: 4px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
+  color: var(--muted);
+  line-height: 1;
+  cursor: pointer;
 }
 
+/* A neutral wash, not the accent: a header full of blue-on-hover buttons competes with the
+   status badges and the project colour, which are the things in that row that carry meaning.
+   Only the destructive action below answers in colour. */
+.term-node__collapse:hover,
+.term-node__ai:hover:not(:disabled),
+.term-node__chat:hover,
+.term-node__mic:hover,
+.term-node__search:hover,
+.term-node__refresh:hover,
+.term-node__external:hover,
+.term-node__maximize:hover,
+.term-node__move-worktree:hover,
 .term-node__hide-fanout:hover,
 .term-node__tidy-fanout:hover {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
+  background: rgba(var(--tint-rgb), 0.1);
+  color: var(--text);
 }
+
+/* Closing a node ends its session, so it is the one header action that answers in --danger. */
+.term-node__close:hover {
+  background: color-mix(in srgb, var(--danger) 20%, transparent);
+  color: var(--danger);
+}
+
+.term-node__ai:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .term-node__hide-fanout[aria-pressed='true'] {
   color: var(--accent-text);
@@ -1955,8 +1908,8 @@ body,
 }
 
 .term-node__find-btn:hover:not(:disabled) {
-  background: rgba(10, 132, 255, 0.18);
-  color: var(--accent-text);
+  background: rgba(var(--tint-rgb), 0.1);
+  color: var(--text);
 }
 
 .term-node__find-btn:disabled {
@@ -1996,19 +1949,7 @@ body,
   color: var(--accent-text);
 }
 
-.term-node__close {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
 
-.term-node__close:hover {
-  background: rgba(247, 118, 142, 0.2);
-  color: var(--danger);
-}
 
 .term-node__body {
   position: relative;
@@ -2668,19 +2609,7 @@ body,
   display: none;
 }
 
-.term-node__collapse {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 4px;
-}
 
-.term-node__collapse:hover {
-  background: rgba(var(--tint-rgb), 0.08);
-  color: var(--text);
-}
 
 /* ---- Node tags ---- */
 .node-tags {
@@ -7327,7 +7256,14 @@ button.group-node__setup:disabled {
 .ss-row:hover .ss-row__ai { opacity: 0.6; }
 .ss-row__ai:hover { opacity: 1 !important; color: var(--accent); }
 .ss-row__ai:disabled { opacity: 0.6; cursor: default; color: var(--accent); }
-.ss-row__close { opacity: 0; border: none; background: transparent; color: var(--text); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; flex: 0 0 auto; }
+.ss-row__close { opacity: 0; border: none; background: transparent; color: var(--text); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; flex: 0 0 auto; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
 .ss-row:hover .ss-row__close { opacity: 0.6; }
 .ss-row__close:hover { opacity: 1 !important; color: var(--danger); }
 
@@ -7674,8 +7610,13 @@ button.group-node__setup:disabled {
   border: none;
   color: var(--text, #ddd);
   cursor: pointer;
-  padding: 2px 6px;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
 }
 .browser-node__btn:disabled {
   opacity: 0.35;
@@ -9467,12 +9408,16 @@ button.group-node__setup:disabled {
   margin-right: auto;
 }
 .kanban-modal__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   background: rgba(var(--tint-rgb), 0.06);
   border: none;
   border-radius: 6px;
   color: rgba(var(--tint-rgb), 0.7);
-  font-size: 13px;
-  padding: 4px 10px;
   cursor: pointer;
 }
 .kanban-modal__action:hover {
@@ -9880,9 +9825,13 @@ button.group-node__setup:disabled {
   border: none;
   color: rgba(var(--tint-rgb), 0.55);
   cursor: pointer;
-  padding: 4px 8px;
   border-radius: 5px;
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
 }
 .label-picker__more:hover {
   background: rgba(var(--tint-rgb), 0.1);
@@ -11774,9 +11723,14 @@ body.focus-mode .dock:hover {
 }
 .account-identity-check {
   flex: none;
-  font-size: 12px;
   line-height: 1;
   color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
 }
 /* A managed home that is missing / an account that cannot be operated: the same cluster, warned.
    Recolour text + outline with the warn token; no tinted fill (there is no --warn-rgb to build

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconClose } from './icons'
 import type { TmuxStatus } from '@shared/types'
 import { localSession } from '../session/localSession'
 
@@ -111,7 +112,7 @@ export function TmuxBanner({ onInstall }: { onInstall: (command: string) => void
         </button>
       )}
       <button className="announce-banner__close" title="Dismiss" onClick={() => setDismissed(true)}>
-        ✕
+        <IconClose />
       </button>
     </div>
   )
