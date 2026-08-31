@@ -416,6 +416,12 @@ export function TabBar({
               </div>
             )
           })}
+          {/* The end-of-strip drop zone (`dropId === ''`) had no marker at all — every other target
+              draws its line as the `::before` of the tab it lands in front of, and "after the last
+              one" has no such tab. It lives INSIDE the scroller so it lands after the last tab
+              rather than at the window edge. Rendered only mid-drag, and its negative margins
+              cancel its own width so appearing costs no layout shift. */}
+          {dragId && dropId === '' && <span className="tab__dropline" aria-hidden />}
           </div>
           <button
             type="button"

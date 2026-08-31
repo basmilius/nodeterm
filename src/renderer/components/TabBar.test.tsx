@@ -116,7 +116,6 @@ describe('TabBar caret menu', () => {
     expect(document.querySelector('.tab-menu')).toBeNull()
   })
 })
-
 describe('TabBar New-project pin', () => {
   let root: Root
   let host: HTMLElement
@@ -175,5 +174,93 @@ describe('TabBar New-project pin', () => {
       host.querySelector<HTMLButtonElement>('.tab__add')!.click()
     })
     expect(onOpenWelcome).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('TabBar drag-reorder', () => {
+  let root: Root
+  let host: HTMLElement
+  let onReorder: ReturnType<typeof vi.fn<(dragged: string, before: string | null) => void>>
+
+  // jsdom has no DragEvent, and React reads `dataTransfer` in onDragStart. One shared stub is
+  // enough: nothing here inspects what was put on it.
+  const drag = async (el: Element, type: string): Promise<void> => {
+    const e = new Event(type, { bubbles: true, cancelable: true })
+    Object.defineProperty(e, 'dataTransfer', { value: { effectAllowed: '', setData: (): void => {} } })
+    await act(async () => {
+      el.dispatchEvent(e)
+    })
+  }
+
+  const tabs = (): Element[] => Array.from(host.querySelectorAll('.tab'))
+
+  beforeEach(async () => {
+    const { TabBar, useProjects } = await load()
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    useProjects.setState({
+      projects: [
+        project(),
+        project({ id: 'p2', name: 'Beta', cwd: '/repo/beta' }),
+        project({ id: 'p3', name: 'Gamma', cwd: '/repo/gamma' })
+      ],
+      activeProjectId: 'p1'
+    })
+    onReorder = vi.fn<(dragged: string, before: string | null) => void>()
+    root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <TabBar
+          onSwitch={vi.fn()}
+          onReconnect={vi.fn()}
+          onReorder={onReorder}
+          onOpenWelcome={vi.fn()}
+          onRename={vi.fn()}
+          onSetFolder={vi.fn()}
+          onCloseProject={vi.fn()}
+          onRemoteAccess={vi.fn()}
+          onSetDefaultAccount={vi.fn()}
+          onSetDefaultPermissionMode={vi.fn()}
+          onOpenProjectSettings={vi.fn()}
+        />
+      )
+    })
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    host.remove()
+    useProjects.setState({ projects: [], activeProjectId: '' })
+  })
+
+  it('drops a tab before the one it was released on', async () => {
+    const [first, , third] = tabs()
+    await drag(third, 'dragstart')
+    await drag(first, 'dragover')
+    await drag(first, 'drop')
+    expect(onReorder).toHaveBeenCalledWith('p3', 'p1')
+  })
+
+  it('marks the hovered tab so the insertion line has something to hang on', async () => {
+    const [first, , third] = tabs()
+    await drag(third, 'dragstart')
+    await drag(first, 'dragover')
+    expect(first.classList.contains('is-drop-before')).toBe(true)
+  })
+
+  it('shows an insertion line for the end zone, which has no tab to hang one off', async () => {
+    const [first] = tabs()
+    await drag(first, 'dragstart')
+    expect(host.querySelector('.tab__dropline')).toBeNull()
+    await drag(host.querySelector('.tabbar__tabs')!, 'dragover')
+    expect(host.querySelector('.tab__dropline')).not.toBeNull()
+  })
+
+  it('drops at the end when released on the strip itself', async () => {
+    const [first] = tabs()
+    await drag(first, 'dragstart')
+    await drag(host.querySelector('.tabbar__tabs')!, 'dragover')
+    await drag(host.querySelector('.tabbar__tabs')!, 'drop')
+    expect(onReorder).toHaveBeenCalledWith('p1', null)
   })
 })
