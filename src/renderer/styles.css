@@ -312,6 +312,9 @@ body,
   padding: 0 14px;
   color: var(--muted);
   font-size: 13px;
+  /* One weight for every tab: a heavier active tab shifts the whole strip's metrics as you switch,
+     and the fill already says which one is active. */
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -324,9 +327,8 @@ body,
 .tab.active {
   /* THE tab look: the active tab is a hole in the bar showing the canvas behind it. */
   background: var(--canvas-bg);
-  font-weight: 600;
-  /* Neutral, never the project colour: the fill and the weight say which tab is active and
-     `.tab__dot` says which project it is, so tinting the label would say the same thing twice. */
+  /* Neutral, never the project colour: the fill alone says which tab is active and `.tab__dot`
+     says which project it is, so tinting the label would say the same thing twice. */
   color: var(--text);
   /* Above `.tabbar::after`, so the tab's own bottom pixel replaces the separator line and the
      fill runs uninterrupted into the canvas. */
@@ -451,18 +453,23 @@ body,
   color: currentColor;
   cursor: pointer;
   line-height: 1;
-  padding: 2px 2px;
-  border-radius: 4px;
+  padding: 2px;
+  border-radius: 5px;
   /* Reachable on every tab, not only the active one, so it is never hidden: an affordance that
      appears on hover cannot be found by someone who does not already know it is there. */
   opacity: 0.45;
+  transition: background 0.12s ease, opacity 0.12s ease;
 }
 
 .tab:hover .tab__caret {
   opacity: 0.7;
 }
 
+/* Same answer a node's header buttons give (`.term-node__refresh` and friends): a tinted plate
+   under the glyph, not just a brighter glyph. */
 .tab__caret:hover {
+  background: rgba(var(--tint-rgb), 0.1);
+  color: var(--text);
   opacity: 1;
 }
 
