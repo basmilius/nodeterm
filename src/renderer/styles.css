@@ -332,8 +332,10 @@ body,
 .tab.active {
   /* THE tab look: the active tab is a hole in the bar showing the canvas behind it. */
   background: var(--canvas-bg);
-  /* Neutral, never the project colour — see `.tab__accent`. The fill alone says which tab is
-     active; the accent dot says which project it is. */
+  /* Neutral, never the project colour: a project accent is picked to stand out on a canvas, not
+     to be read as 13px type on a near-black strip (a dark blue or a deep red tab name was barely
+     legible). The fill alone says which tab is active; the glyph, or the fallback `.tab__dot`,
+     says which project it is. */
   color: var(--text);
   /* Above `.tabbar::after`, so the tab's own bottom pixel replaces the separator line and the
      fill runs uninterrupted into the canvas. */
@@ -422,24 +424,6 @@ body,
    single-class rules and Tailwind's, wherever they sit in source order. */
 span[data-project-glyph='icon'] {
   border-radius: 0;
-}
-
-/* The project's colour, when its glyph has taken the fallback dot's place. The colour used to be
-   the ACTIVE TAB'S TEXT COLOUR, which is where the contrast went: a project accent is picked to
-   stand out on a canvas, not to be read as 13px type on a near-black strip (a dark blue or a
-   deep red tab name was barely legible). So the accent moves to a dot and the label stays
-   neutral — the same division the no-icon tab always had, where `.tab__dot` carried the colour
-   and the text did not. Rendered on every tab that shows a glyph, in that project's colour on
-   every tab too: the colour says which PROJECT this is, while the background and weight say which
-   tab is active. (The fallback `.tab__dot` follows the same rule — TabBar hands it `p.color`
-   unconditionally — so two neighbouring tabs cannot mean different things by the same colour.)
-   The declaration below is the unstyled floor for a project with no colour. */
-.tab__accent {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: rgba(var(--tint-rgb), 0.3);
 }
 
 /* Unread-completion count badge on a project tab. */

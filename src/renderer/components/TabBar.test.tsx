@@ -336,3 +336,68 @@ describe('TabBar options button', () => {
     expect(document.querySelector('.tab-menu')).not.toBeNull()
   })
 })
+
+describe('TabBar accent dot', () => {
+  let root: Root
+  let host: HTMLElement
+
+  const mount = async (over: Partial<Project>): Promise<void> => {
+    useProjects.setState({ projects: [project(over)], activeProjectId: 'p1' })
+    root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <TabBar
+          onSwitch={vi.fn()}
+          onReconnect={vi.fn()}
+          onReorder={vi.fn()}
+          onOpenWelcome={vi.fn()}
+          onRename={vi.fn()}
+          onSetFolder={vi.fn()}
+          onCloseProject={vi.fn()}
+          onRemoteAccess={vi.fn()}
+          onSetDefaultAccount={vi.fn()}
+          onSetDefaultPermissionMode={vi.fn()}
+          onOpenProjectSettings={vi.fn()}
+        />
+      )
+    })
+  }
+
+  beforeEach(() => {
+    ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = NoopResizeObserver
+    Element.prototype.scrollIntoView = (): void => {}
+    ;(window as unknown as { nodeTerminal: any }).nodeTerminal = {}
+    host = document.createElement('div')
+    document.body.appendChild(host)
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    host.remove()
+    useProjects.setState({ projects: [], activeProjectId: '' })
+  })
+
+  // A glyph identifies the project better than a colour ever did, and beside one the dot was the
+  // same colour twice: a lucide glyph is drawn IN the project colour, and for a picture the colour
+  // is read back out of the picture (`effectiveProjectColor`).
+  it.each([
+    ['an image', { type: 'image' as const, src: 'data:image/png;base64,AA', source: 'upload' as const }],
+    ['an emoji', { type: 'emoji' as const, emoji: '🚀' }],
+    ['a lucide glyph', { type: 'lucide' as const, name: 'zap' }]
+  ])('renders no accent dot beside %s', async (_label, icon) => {
+    await mount({ icon })
+
+    expect(host.querySelector('.tab__accent')).toBeNull()
+    expect(host.querySelector('[data-project-glyph="icon"]')).not.toBeNull()
+  })
+
+  it('leaves the no-icon tab exactly as it was: the fallback dot, in the project colour', async () => {
+    await mount({})
+
+    expect(host.querySelector('.tab__accent')).toBeNull()
+    const dot = host.querySelector<HTMLElement>('.tab__dot')
+    expect(dot).not.toBeNull()
+    expect(dot!.classList.contains('tab__dot--icon')).toBe(false)
+    expect(dot!.style.background).not.toBe('')
+  })
+})

@@ -369,9 +369,6 @@ export function TabBar({
                   // fallback dot, byte-identical to before.
                   className={showsGlyph ? 'tab__dot tab__dot--icon' : 'tab__dot'}
                 />
-                {/* The glyph took the fallback dot's place, so the project's colour rides its own
-                    small dot instead of tinting the label. See `.tab__accent`. */}
-                {showsGlyph && <span className="tab__accent" style={{ background: shownColor }} />}
                 {/* An SSH project looks identical to a local one once it is named, and the
                     difference matters: its terminals, git and file ops all run on another
                     machine. The chip says so at a glance; the tab title carries user@host. */}
