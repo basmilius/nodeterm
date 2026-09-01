@@ -439,6 +439,7 @@ import { useBoardLog } from '../state/boardLog'
 import { isKanbanOpen, useViewMode, viewFor } from '../state/viewMode'
 import { useFocusNode, FOCUS_SURFACE_ID } from '../state/focusNode'
 import { focusTargetId } from '../lib/focusTarget'
+import { snapViewportZoom } from '../lib/zoomSnap'
 import {
   createCanvasPublisher,
   isEphemeralNodeId,
@@ -3211,6 +3212,9 @@ export function Canvas() {
       const next = nextWheelZoom(zoom, d, plainWheel ? wheelZoomSpeed : 1)
       if (next === zoom) return
       const k = next / zoom
+      // A wheel zoom's contract is "the spot under the cursor stays put", so the settle's snap
+      // holds it too. Cleared at the end, so a dock button falls back to the centre it zooms around.
+      zoomAnchorRef.current = { x: px, y: py }
       setViewport({ x: px - (px - x) * k, y: py - (py - y) * k, zoom: next })
     }
     wrap.addEventListener('wheel', onWheel, { capture: true, passive: false })
@@ -7976,6 +7980,34 @@ export function Canvas() {
 
   const zoomRafRef = useRef<number | null>(null)
   const gestureSettleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Wrapper-relative point the whole-percent snap holds still; null = the viewport centre. */
+  const zoomAnchorRef = useRef<{ x: number; y: number } | null>(null)
+  /** The zoom this gesture started at, so a pure PAN never nudges the scale on release. */
+  const gestureStartZoomRef = useRef<number | null>(null)
+  /** Set while the snap's own `setViewport` runs: its move must not re-open the gesture it ends. */
+  const snappingRef = useRef(false)
+
+  /** End of a zoom gesture: land the camera on the percentage the dock already shows (lib/zoomSnap.ts). */
+  const snapZoomToWholePercent = useCallback(() => {
+    const startZoom = gestureStartZoomRef.current
+    const point = zoomAnchorRef.current
+    gestureStartZoomRef.current = null
+    zoomAnchorRef.current = null
+    // A pan is not a zoom: panning a canvas restored at a fractional zoom would nudge the scale.
+    if (startZoom === null || startZoom === viewportRef.current.zoom) return
+    const rect = flowWrapRef.current?.getBoundingClientRect()
+    const next = snapViewportZoom(
+      viewportRef.current,
+      point ?? { x: (rect?.width ?? 0) / 2, y: (rect?.height ?? 0) / 2 }
+    )
+    if (!next) return
+    snappingRef.current = true
+    try {
+      setViewport(next)
+    } finally {
+      snappingRef.current = false
+    }
+  }, [setViewport])
   const onMove = useCallback(
     (_e: unknown, vp: Viewport) => {
       viewportRef.current = vp
@@ -7995,12 +8027,18 @@ export function Canvas() {
       // executed mid-gesture is both the jank and the black-terminal window (see webgl-budget's
       // gesture latch). Latched HERE, not in the rAF, so no swap can slip in before the first
       // coalesced frame.
-      setWebglGesture(true)
-      if (gestureSettleRef.current) clearTimeout(gestureSettleRef.current)
-      gestureSettleRef.current = setTimeout(() => {
-        gestureSettleRef.current = null
-        setWebglGesture(false)
-      }, WEBGL_GESTURE_SETTLE_MS)
+      // Skipped for the snap's own move: re-arming the settle on it would restart the gesture the
+      // snap ends, holding the renderer swaps for another window on every zoom.
+      if (!snappingRef.current) {
+        setWebglGesture(true)
+        if (gestureStartZoomRef.current === null) gestureStartZoomRef.current = vp.zoom
+        if (gestureSettleRef.current) clearTimeout(gestureSettleRef.current)
+        gestureSettleRef.current = setTimeout(() => {
+          gestureSettleRef.current = null
+          snapZoomToWholePercent()
+          setWebglGesture(false)
+        }, WEBGL_GESTURE_SETTLE_MS)
+      }
       // Coalesce the zoom-% readout to one update per frame so a zoom gesture doesn't
       // re-render the whole Canvas on every intermediate viewport event.
       if (zoomRafRef.current == null) {
@@ -8015,7 +8053,7 @@ export function Canvas() {
         })
       }
     },
-    [markDirty]
+    [markDirty, snapZoomToWholePercent]
   )
 
   // Focus a node by id (notification click): select + center it; if it lives in another
