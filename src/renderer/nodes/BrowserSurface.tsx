@@ -4,6 +4,7 @@ import { BrowserStartPage } from './BrowserStartPage'
 import { useBrowserHistory } from '../state/browserHistory'
 import { useDiscardWhenHidden, webviewAudible } from './useDiscardWhenHidden'
 import { DiscardedPlate } from './DiscardedPlate'
+import { WEBVIEW_HOST_CLASS } from '../lib/panShield'
 
 // Minimal typing for the Electron <webview> element methods/events we use.
 type WebviewEl = HTMLElement & {
@@ -272,7 +273,7 @@ export function BrowserSurface({
           }}
         />
       </div>
-      <div className="browser-node__view nodrag nowheel">
+      <div className={`browser-node__view nodrag nowheel ${WEBVIEW_HOST_CLASS}`}>
         {/* The element is UNMOUNTED while discarded — that is what ends the guest process; an
             emptied `src` attribute does not (Electron ignores a src mutation to nothing). */}
         {!discarded && (

@@ -6,6 +6,7 @@ import { httpUrl } from './webUrl'
 import { useDiscardWhenHidden, webviewAudible, type AudibleWebview } from './useDiscardWhenHidden'
 import { DiscardedPlate } from './DiscardedPlate'
 import { useWebviewKeepAlive } from '../state/webviewKeepAlive'
+import { WEBVIEW_HOST_CLASS } from '../lib/panShield'
 
 /**
  * A web view node. When `data.url` is set it loads that live URL; otherwise it serves the
@@ -144,7 +145,7 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
       </div>
 
       <div className="editor-node__body">
-        <div className="editor-node__image nodrag nowheel">
+        <div className={`editor-node__image nodrag nowheel ${WEBVIEW_HOST_CLASS}`}>
           {discarded || restoring ? (
             <DiscardedPlate restoring={restoring} />
           ) : src ? (

@@ -439,6 +439,7 @@ import { useBoardLog } from '../state/boardLog'
 import { isKanbanOpen, useViewMode, viewFor } from '../state/viewMode'
 import { useFocusNode, FOCUS_SURFACE_ID } from '../state/focusNode'
 import { focusTargetId } from '../lib/focusTarget'
+import { PAN_SHIELD_CLASS } from '../lib/panShield'
 import {
   createCanvasPublisher,
   isEphemeralNodeId,
@@ -7996,10 +7997,14 @@ export function Canvas() {
       // gesture latch). Latched HERE, not in the rAF, so no swap can slip in before the first
       // coalesced frame.
       setWebglGesture(true)
+      // Same latch, second consumer (lib/panShield.ts). Toggled on the element, not through
+      // state: this runs per viewport event, and re-rendering the canvas is what the latch avoids.
+      flowWrapRef.current?.classList.add(PAN_SHIELD_CLASS)
       if (gestureSettleRef.current) clearTimeout(gestureSettleRef.current)
       gestureSettleRef.current = setTimeout(() => {
         gestureSettleRef.current = null
         setWebglGesture(false)
+        flowWrapRef.current?.classList.remove(PAN_SHIELD_CLASS)
       }, WEBGL_GESTURE_SETTLE_MS)
       // Coalesce the zoom-% readout to one update per frame so a zoom gesture doesn't
       // re-render the whole Canvas on every intermediate viewport event.

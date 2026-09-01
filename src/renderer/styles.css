@@ -7502,6 +7502,14 @@ button.group-node__setup:disabled {
   width: 100%;
   height: 100%;
 }
+
+/* An Electron <webview> is a separate process: a pointer or wheel event that lands on the guest
+   never reaches the embedder, so a pan crossing a browser node used to stall at its edge. For the
+   length of a camera gesture the host leaves hit-testing and those events reach React Flow's pane.
+   The host, not the <webview>: the host is also the `nowheel` element. */
+.flow-wrap.is-panning .webview-host {
+  pointer-events: none;
+}
 /* Memory saver plate: what stands in for a page whose Chromium process was released while the
    node sat off-screen. Deliberately quiet — this is an ambient state that heals itself on view,
    not an error. */
