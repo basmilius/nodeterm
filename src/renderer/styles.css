@@ -3823,7 +3823,32 @@ body,
   -webkit-app-region: no-drag;
 }
 
+/* The drawer scrim covers the WHOLE window, title bar included, so while Explorer or Source
+   Control is open the `no-drag` above takes away the only region the window can be dragged by.
+   This strip hands it back over the tab bar, which the scrim covers anyway. The drawer is raised
+   over it (below) so its own head buttons keep working: a fixed pseudo-element paints above a
+   static sibling. */
+.drawer-overlay::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--tabbar-h);
+  -webkit-app-region: drag;
+}
+
+/* A PINNED drawer covers nothing (transparent, pointer-events: none, below the tab bar), so the
+   tab bar drags on its own and the strip would only sit over the canvas. */
+.drawer-overlay--pinned::before {
+  content: none;
+}
+
 .drawer {
+  /* Positioned so it paints above the drag strip on `.drawer-overlay::before`, which is fixed and
+     would otherwise cover the head buttons in the title-bar strip. */
+  position: relative;
+  z-index: 1;
   width: 360px;
   max-width: 92vw;
   height: 100%;
