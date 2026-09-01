@@ -453,7 +453,9 @@ body,
   line-height: 1;
   padding: 2px 2px;
   border-radius: 4px;
-  opacity: 0;
+  /* Reachable on every tab, not only the active one, so it is never hidden: an affordance that
+     appears on hover cannot be found by someone who does not already know it is there. */
+  opacity: 0.45;
 }
 
 .tab:hover .tab__caret {
