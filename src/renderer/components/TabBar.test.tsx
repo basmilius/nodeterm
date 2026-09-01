@@ -264,3 +264,57 @@ describe('TabBar drag-reorder', () => {
     expect(onReorder).toHaveBeenCalledWith('p1', null)
   })
 })
+
+describe('TabBar options button', () => {
+  let root: Root
+  let host: HTMLElement
+
+  beforeEach(async () => {
+    ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = NoopResizeObserver
+    Element.prototype.scrollIntoView = (): void => {}
+    ;(window as unknown as { nodeTerminal: any }).nodeTerminal = {}
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    useProjects.setState({
+      projects: [project(), project({ id: 'p2', name: 'Beta' })],
+      activeProjectId: 'p1'
+    })
+    root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <TabBar
+          onSwitch={vi.fn()}
+          onReconnect={vi.fn()}
+          onReorder={vi.fn()}
+          onOpenWelcome={vi.fn()}
+          onRename={vi.fn()}
+          onSetFolder={vi.fn()}
+          onCloseProject={vi.fn()}
+          onRemoteAccess={vi.fn()}
+          onSetDefaultAccount={vi.fn()}
+          onSetDefaultPermissionMode={vi.fn()}
+          onOpenProjectSettings={vi.fn()}
+        />
+      )
+    })
+  })
+
+  afterEach(() => {
+    act(() => root.unmount())
+    host.remove()
+    useProjects.setState({ projects: [], activeProjectId: '' })
+  })
+
+  it('sits on every tab, so the menu is reachable without activating it first', () => {
+    expect(host.querySelectorAll('.tab__caret').length).toBe(2)
+  })
+
+  it('opens the menu for the tab it belongs to, active or not', async () => {
+    const inactive = host.querySelectorAll<HTMLButtonElement>('.tab__caret')[1]
+    await act(async () => {
+      inactive.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(document.querySelector('.tab-menu')).not.toBeNull()
+  })
+})

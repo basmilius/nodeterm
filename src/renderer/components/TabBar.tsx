@@ -12,7 +12,7 @@ import { sessionCount, sessionForProject, useProjectSession } from '../session/s
 import { tabClickAction } from '../session/relay-tab'
 import { useMenuFlip } from '../ui/useMenuFlip'
 import { commandTooltip } from '../lib/keybindingOverrides'
-import { IconCanvasView, IconChevronDown, IconKanban, IconPlus } from './icons'
+import { IconCanvasView, IconKanban, IconMoreVertical, IconPlus } from './icons'
 import { ProjectGlyph } from './ProjectGlyph'
 import {
   ALL_PERMISSION_MODES,
@@ -400,17 +400,18 @@ export function TabBar({
                     {kanbanActive ? <IconCanvasView /> : <IconKanban />}
                   </button>
                 )}
-                {active && editingId !== p.id && (
+                {editingId !== p.id && (
                   <button
                     className="tab__caret"
                     title="Project options"
+                    aria-label="Project options"
                     onClick={(e) => {
                       e.stopPropagation()
                       if (menuId === p.id) closeMenu()
                       else openMenu(p.id, e.currentTarget)
                     }}
                   >
-                    <IconChevronDown />
+                    <IconMoreVertical />
                   </button>
                 )}
               </div>
