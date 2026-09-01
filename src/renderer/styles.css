@@ -1310,36 +1310,6 @@ body,
     0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
-/* Hover explanation for the bridge handles (CSS tooltip via the data-tip attribute). */
-.react-flow__handle.bridge-handle[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  white-space: nowrap;
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: var(--surface-black);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, calc(0.5 * var(--shadow-k)));
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s ease;
-  z-index: 50;
-}
-/* Grow inward over the node so the label never runs off-screen. */
-.react-flow__handle.bridge-handle--out[data-tip]::after {
-  right: 50%;
-}
-.react-flow__handle.bridge-handle--in[data-tip]::after {
-  left: 50%;
-}
-.react-flow__handle.bridge-handle:hover[data-tip]::after {
-  opacity: 1;
-}
 
 .term-node__header {
   display: flex;
