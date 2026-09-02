@@ -5717,6 +5717,15 @@ body,
   display: none;
 }
 
+/* A tooltip wraps its trigger in a span, so inside the pill, the worktree chip and the actions row
+   the WRAPPER is the flex item, not the button. Without this the fixed-size buttons would shrink
+   under the 180px name input instead of holding their 11px / 22px boxes. */
+.group-node__label > .tooltip-trigger,
+.group-node__wt > .tooltip-trigger,
+.group-node__actions > .tooltip-trigger {
+  flex: none;
+}
+
 .group-node__dot {
   width: 11px;
   height: 11px;
