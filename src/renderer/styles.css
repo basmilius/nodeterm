@@ -1829,6 +1829,12 @@ body,
   transform: translate(-50%, -100%);
 }
 
+/* Opens sideways: the anchor x is the trigger's RIGHT edge and is already the bubble's left edge,
+   so the base rule's horizontal pull is dropped and the centering moves to the other axis. */
+.tooltip--right {
+  transform: translateY(-50%);
+}
+
 
 
 /* Icon sizing for the boxes that are smaller than the shared 16px glyph. The icon set is one
