@@ -12,6 +12,8 @@ const state = (over: Partial<FocusRestoreState> = {}): FocusRestoreState => ({
   lastNodeId: 'term-1',
   activeElement: el('BODY'),
   openDialogs: 0,
+  boardOpen: false,
+  settingsOpen: false,
   ...over
 })
 
@@ -30,6 +32,18 @@ describe('nodeToRefocus', () => {
 
   it('refuses while a modal is open', () => {
     expect(nodeToRefocus(state({ openDialogs: 1 }))).toBeNull()
+  })
+
+  it('refuses while the kanban board is up', () => {
+    // The board is an opaque overlay over a still-mounted canvas and registers no dialog, so the
+    // restore would aim the keyboard at a terminal the user cannot see.
+    expect(nodeToRefocus(state({ boardOpen: true }))).toBeNull()
+  })
+
+  it('refuses while the settings page is up', () => {
+    // Same shape as the board: a full-page surface outside the dialog stack, and its fields are
+    // only covered by the typing refusal once one of them actually has focus.
+    expect(nodeToRefocus(state({ settingsOpen: true }))).toBeNull()
   })
 
   it('refuses when a terminal already has focus', () => {

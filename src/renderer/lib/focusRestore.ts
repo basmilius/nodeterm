@@ -21,6 +21,15 @@ export interface FocusRestoreState {
   activeElement: ContextElement | null
   /** How many modals are open (`openDialogCount()`). */
   openDialogs: number
+  /**
+   * The kanban board is up for the active project (`isKanbanOpen`).
+   *
+   * The board is NOT in the dialog stack, so `openDialogs` cannot see it. A full-page surface
+   * that covers the canvas without registering there owes a field of its own here.
+   */
+  boardOpen: boolean
+  /** The settings page is up. Also outside the dialog stack, for the same reason as `boardOpen`. */
+  settingsOpen: boolean
 }
 
 /**
@@ -30,6 +39,11 @@ export interface FocusRestoreState {
  * - **A modal is open**: a confirm, the card modal (whose own terminal focuses itself), a prompt.
  *   Stealing focus out from under one is worse than the bug this fixes, and `openDialogCount`
  *   already answers it for every modal in the app (they all register in the dialog stack).
+ * - **A full-page surface is up**: the kanban board and the settings page both paint an OPAQUE
+ *   layer over a still-mounted canvas, and neither registers in the dialog stack. Restoring under
+ *   one aims the keyboard at a terminal the user cannot see, which is the same hazard the modal
+ *   refusal exists for and worse than the bug: they are looking at the board and typing into a
+ *   pane somewhere behind it.
  * - **A typing surface has focus**: a settings field, a sticky's textarea, Monaco. Chromium
  *   restores the previously focused element on activation, so this is the ordinary case of the
  *   user having left the app from a text field; it is not ours to override.
@@ -37,8 +51,15 @@ export interface FocusRestoreState {
  *   would be a no-op at best and could move focus to a DIFFERENT node at worst.
  */
 export function nodeToRefocus(state: FocusRestoreState): string | null {
-  const { lastNodeId, activeElement, openDialogs } = state
-  if (!lastNodeId || openDialogs > 0) return null
-  if (isTerminalTarget(activeElement) || isTypingTarget(activeElement)) return null
+  const { lastNodeId, activeElement, openDialogs, boardOpen, settingsOpen } = state
+  if (!lastNodeId || openDialogs > 0) {
+    return null
+  }
+  if (boardOpen || settingsOpen) {
+    return null
+  }
+  if (isTerminalTarget(activeElement) || isTypingTarget(activeElement)) {
+    return null
+  }
   return lastNodeId
 }

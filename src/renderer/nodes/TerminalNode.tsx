@@ -4337,14 +4337,20 @@ export function TerminalNode({
    * Take the keyboard: leave the guard, focus xterm, and report the node active.
    *
    * Split out of `onBodyEnter` so a deliberate CLICK can run it with no delay — see `onGuardUp`.
+   *
+   * `ack` (default true) also marks the node's finish read. Every gesture that reaches here aims
+   * at THIS node — a dwell, a click, a sidebar or notification jump — so the read is real. The one
+   * caller that passes false is the window-activation restore, which nobody aimed at anything.
    */
-  const enterNow = () => {
+  const enterNow = (opts?: { ack?: boolean }) => {
     if (dwellRef.current) clearTimeout(dwellRef.current)
     setArmed(false)
     termRef.current?.focus()
     useTerminalFocus.getState().remember(id)
     useAgentStatus.getState().setActive(id, true)
-    useAgentStatus.getState().clearUnread(id)
+    if (opts?.ack !== false) {
+      useAgentStatus.getState().clearUnread(id)
+    }
     presence.reportFocus(id)
   }
 
@@ -4359,8 +4365,9 @@ export function TerminalNode({
   useEffect(() => {
     if (focusReq === 0 || focusReq === lastFocusReqRef.current) return
     lastFocusReqRef.current = focusReq
+    const { ack } = useTerminalFocus.getState()
     useTerminalFocus.setState({ nodeId: null })
-    enterNow()
+    enterNow({ ack })
     // enterNow closes over live refs/setters; re-running on its identity would fire spuriously.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusReq])

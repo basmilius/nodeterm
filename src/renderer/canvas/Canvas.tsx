@@ -7259,16 +7259,24 @@ export function Canvas() {
     []
   )
 
+  // The settings page is React state, and the listener below is registered once — so it reads the
+  // flag through a ref rather than taking a dep and re-registering on every open/close.
+  const settingsOpenRef = useRef(settingsOpen)
+  settingsOpenRef.current = settingsOpen
+
   // Cmd+Tab back into the app: hand the keyboard to the terminal that last had it (issue #557).
   // Terminal focus is pointer-driven (the hover guard blurs xterm on `mouseleave`), so a pointer
   // parked on a second display leaves the app with NO terminal focused, and returning gives the
   // canvas dispatcher every keystroke, where a bare Backspace is `canvas.deleteSelection`. The
-  // refusals (a modal is open, a text surface or a terminal already holds focus) are the pure
-  // `nodeToRefocus`; this effect is the DOM read plus the request.
+  // refusals (a modal, the board or the settings page is up, a text surface or a terminal already
+  // holds focus) are the pure `nodeToRefocus`; this effect is the DOM read plus the request.
   //
   // Deferred by a macrotask rather than read inline: Chromium restores its own previously focused
   // element around window activation, and deciding before it has settled would read `<body>` and
   // steal focus from the settings field the user actually left the app from.
+  //
+  // `{ ack: false }`: coming back to the window is not evidence that the user has SEEN the node,
+  // and the ACK reaches past this machine (the notch capsule and the paired phone's Live Activity).
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     const onWindowFocus = () => {
@@ -7277,9 +7285,13 @@ export function Canvas() {
         const target = nodeToRefocus({
           lastNodeId: useTerminalFocus.getState().lastNodeId,
           activeElement: document.activeElement as unknown as ContextElement | null,
-          openDialogs: openDialogCount()
+          openDialogs: openDialogCount(),
+          boardOpen: isKanbanOpen(useProjects.getState().activeProjectId),
+          settingsOpen: settingsOpenRef.current
         })
-        if (target) useTerminalFocus.getState().request(target)
+        if (target) {
+          useTerminalFocus.getState().request(target, { ack: false })
+        }
       }, 0)
     }
     window.addEventListener('focus', onWindowFocus)
