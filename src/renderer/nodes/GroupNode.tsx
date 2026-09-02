@@ -24,7 +24,7 @@ export function setWorktreeActionHandler(
 
 /**
  * A group frame: a dashed, rounded, translucent box that contains child nodes. A floating
- * label pill (color dot + name) sits on the top border; ungroup/× appear top-right on hover.
+ * label pill (color dot + name) sits on the top border; Ungroup appears top-right on hover.
  * Children are real React Flow nodes parented to this one, so dragging the frame moves them
  * together. The frame renders behind its children (it appears first in the array).
  */
@@ -302,19 +302,11 @@ export function GroupNode({ id, data, selected }: NodeProps<CanvasNode>) {
       <div className="group-node__actions nodrag">
         <button
           className="group-node__ungroup"
-          title="Ungroup"
-          aria-label="Ungroup"
+          title="Ungroup (keeps nodes)"
+          aria-label="Ungroup (keeps nodes)"
           onClick={ungroup}
         >
           <IconUngroup />
-        </button>
-        <button
-          className="group-node__close"
-          title="Remove group (keeps nodes)"
-          aria-label="Remove group"
-          onClick={ungroup}
-        >
-          <IconClose />
         </button>
       </div>
     </div>
