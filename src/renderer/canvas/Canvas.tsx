@@ -741,6 +741,11 @@ const offsetFrom = (
 }
 
 
+/** Zoom-step tween. One constant because the same step sits on two surfaces, the dock and the
+ *  bottom-left controls, and a user who reaches for whichever is nearer must not get two
+ *  different gestures. */
+const ZOOM_STEP_DURATION_MS = 150
+
 // A canvas-control request whose source node lives in another project switches that project in
 // first, and the active-project effect hydrates React Flow ASYNCHRONOUSLY — so the handler waits
 // for the node to appear instead of reading an empty canvas one tick too early. Bounded well under
@@ -13378,16 +13383,15 @@ export function Canvas() {
               default modes. */}
           {glyphLayerActive && <SharedGlyphLayer />}
           {/* The library's own zoom/fit glyphs are swapped for the shared icon set so this cluster
-              matches every other floating control; the actions behind them are unchanged, and
-              zoom stays instant here (the dock's buttons are the animated pair). */}
+              matches every other floating control; the actions behind them are unchanged. */}
           <Controls showZoom={false} showFitView={false} showInteractive={false} position="bottom-left">
             <Tooltip label="Zoom in" placement="top">
-              <ControlButton aria-label="Zoom in" onClick={() => zoomIn()}>
+              <ControlButton aria-label="Zoom in" onClick={() => zoomIn({ duration: ZOOM_STEP_DURATION_MS })}>
                 <IconPlus />
               </ControlButton>
             </Tooltip>
             <Tooltip label="Zoom out" placement="top">
-              <ControlButton aria-label="Zoom out" onClick={() => zoomOut()}>
+              <ControlButton aria-label="Zoom out" onClick={() => zoomOut({ duration: ZOOM_STEP_DURATION_MS })}>
                 <IconMinus />
               </ControlButton>
             </Tooltip>
@@ -13988,8 +13992,8 @@ export function Canvas() {
         onAddWorktree={() => openWorktreeDialog(null)}
         onSave={persist}
         onFitView={fitAll}
-        onZoomIn={() => zoomIn({ duration: 150 })}
-        onZoomOut={() => zoomOut({ duration: 150 })}
+        onZoomIn={() => zoomIn({ duration: ZOOM_STEP_DURATION_MS })}
+        onZoomOut={() => zoomOut({ duration: ZOOM_STEP_DURATION_MS })}
         onZoomTo={zoomToPct}
         onDictate={toggleDictation}
         dictateActive={dictationOpen}
