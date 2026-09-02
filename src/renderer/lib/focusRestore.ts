@@ -30,6 +30,13 @@ export interface FocusRestoreState {
   boardOpen: boolean
   /** The settings page is up. Also outside the dialog stack, for the same reason as `boardOpen`. */
   settingsOpen: boolean
+  /**
+   * The nodes of the project currently on screen, by id.
+   *
+   * Empty means "we cannot tell which project's nodes we are holding", which refuses rather than
+   * guesses: `nodesRef` is only trustworthy while its epoch tag still matches the active project.
+   */
+  liveIds: ReadonlySet<string>
 }
 
 /**
@@ -49,10 +56,19 @@ export interface FocusRestoreState {
  *   user having left the app from a text field; it is not ours to override.
  * - **A terminal already has focus**: the pointer never left, so nothing was lost. Restoring
  *   would be a no-op at best and could move focus to a DIFFERENT node at worst.
+ * - **The remembered node is not on the canvas we are looking at**: `lastNodeId` deliberately
+ *   survives a project switch, and a request for an unmounted node is not dropped, it stays
+ *   LATENT until that node mounts (`TerminalNode`'s `lastFocusReqRef` starts at 0, and only the
+ *   consumer clears the store). So restoring a node that belongs to another project queues a
+ *   focus that fires minutes later, the next time the user switches back to it. Refusing here is
+ *   what keeps the restore bound to the canvas the activation actually returned to.
  */
 export function nodeToRefocus(state: FocusRestoreState): string | null {
-  const { lastNodeId, activeElement, openDialogs, boardOpen, settingsOpen } = state
+  const { lastNodeId, activeElement, openDialogs, boardOpen, settingsOpen, liveIds } = state
   if (!lastNodeId || openDialogs > 0) {
+    return null
+  }
+  if (!liveIds.has(lastNodeId)) {
     return null
   }
   if (boardOpen || settingsOpen) {

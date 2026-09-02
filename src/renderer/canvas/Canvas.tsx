@@ -7282,12 +7282,20 @@ export function Canvas() {
     const onWindowFocus = () => {
       if (timer) clearTimeout(timer)
       timer = setTimeout(() => {
+        // Only the nodes we can prove belong to the canvas on screen: `nodesRef` and
+        // `activeProjectId` do not turn over in one commit, and an id we cannot place must not
+        // become a request that waits for its project to come back.
+        const activeProjectId = useProjects.getState().activeProjectId
+        const liveIds = new Set(
+          nodesProjectIdRef.current === activeProjectId ? nodesRef.current.map((n) => n.id) : []
+        )
         const target = nodeToRefocus({
           lastNodeId: useTerminalFocus.getState().lastNodeId,
           activeElement: document.activeElement as unknown as ContextElement | null,
           openDialogs: openDialogCount(),
-          boardOpen: isKanbanOpen(useProjects.getState().activeProjectId),
-          settingsOpen: settingsOpenRef.current
+          boardOpen: isKanbanOpen(activeProjectId),
+          settingsOpen: settingsOpenRef.current,
+          liveIds
         })
         if (target) {
           useTerminalFocus.getState().request(target, { ack: false })

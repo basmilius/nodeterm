@@ -35,11 +35,17 @@ export const useTerminalFocus = create<{
    * that is gone or unmounted simply misses the request, the same fail-open as `request`.
    *
    * It therefore also survives a PROJECT SWITCH, so the remembered node can belong to another
-   * project. That fails open today because the request is consumed by a mounted `TerminalNode`
-   * and the node of an inactive project is unmounted. Load-bearing: a change that starts routing
-   * a focus request across projects (switching to the node's project first, as `focusNodeById`
-   * does) has to clear or qualify this, or a window activation would yank the user out of the
-   * project they are looking at.
+   * project. That does NOT fail open: a request for an unmounted node stays LATENT rather than
+   * being dropped. `nodeId` is cleared only by the consumer, and `TerminalNode`'s `lastFocusReqRef`
+   * starts at 0, so the node consumes the request the moment it mounts. The cross-project
+   * `pendingFocusRef` path in `Canvas` relies on exactly that, requesting right after a project
+   * loads and before the node exists.
+   *
+   * So the restore, not this field, is where the staleness is refused: `nodeToRefocus` takes the
+   * live nodes of the project on screen and returns null for an id that is not among them. Without
+   * it, leaving project A with a terminal focused, switching to B and Cmd+Tabbing back would park a
+   * request that fires on the next switch to A, handing a node the keyboard minutes after the
+   * activation nobody aimed at it.
    */
   lastNodeId: string | null
   /**

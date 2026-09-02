@@ -14,6 +14,7 @@ const state = (over: Partial<FocusRestoreState> = {}): FocusRestoreState => ({
   openDialogs: 0,
   boardOpen: false,
   settingsOpen: false,
+  liveIds: new Set(['term-1']),
   ...over
 })
 
@@ -59,5 +60,23 @@ describe('nodeToRefocus', () => {
 
   it('restores when nothing at all is focused', () => {
     expect(nodeToRefocus(state({ activeElement: null }))).toBe('term-1')
+  })
+
+  it('refuses a remembered node that belongs to another project', () => {
+    // `lastNodeId` survives a project switch on purpose, and a request for an unmounted node is
+    // not dropped: it stays latent and fires when that node next mounts. Leaving project A with a
+    // terminal focused, switching to B and Cmd+Tabbing back would otherwise park a request that
+    // takes the keyboard on the next switch back to A, minutes after the activation.
+    expect(nodeToRefocus(state({ liveIds: new Set(['other-1', 'other-2']) }))).toBeNull()
+  })
+
+  it('refuses when the live nodes cannot be resolved at all', () => {
+    // Empty means "we do not know which project's nodes we are holding", not "the canvas is
+    // empty": the node array and the active project id do not turn over in one commit.
+    expect(nodeToRefocus(state({ liveIds: new Set() }))).toBeNull()
+  })
+
+  it('restores a node that is on the canvas alongside others', () => {
+    expect(nodeToRefocus(state({ liveIds: new Set(['other-1', 'term-1']) }))).toBe('term-1')
   })
 })
