@@ -4987,7 +4987,12 @@ export function TerminalNode({
         )}
         {!isHidden('ai-name', hiddenHeaderButtons) && (
           <Tooltip label="Name with AI (from terminal output)">
-            <button className="term-node__ai nodrag" disabled={naming} onClick={nameWithAi}>
+            <button
+              className="term-node__ai nodrag"
+              aria-label="Name with AI"
+              disabled={naming}
+              onClick={nameWithAi}
+            >
               {naming ? <span className="ui-spinner" /> : <IconSparkle />}
             </button>
           </Tooltip>

@@ -222,7 +222,7 @@ export function ShortcutsPanel({ onClose, onCustomize }: ShortcutsPanelProps) {
       <div className="shortcuts" onClick={(e) => e.stopPropagation()}>
         <div className="shortcuts__head">
           <h2>Keyboard shortcuts</h2>
-          <button className="drawer__close" onClick={onClose}>
+          <button className="drawer__close" aria-label="Close" onClick={onClose}>
             <IconClose />
           </button>
         </div>

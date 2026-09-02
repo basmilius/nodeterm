@@ -420,7 +420,7 @@ export function SourceControlPanel({
       <aside className="drawer scm" onClick={(e) => e.stopPropagation()}>
         <div className="drawer__head">
           <h2>Source Control</h2>
-          <button className="drawer__close" onClick={onClose}>
+          <button className="drawer__close" aria-label="Close" onClick={onClose}>
             <IconClose />
           </button>
         </div>

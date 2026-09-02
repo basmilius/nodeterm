@@ -128,7 +128,7 @@ export function LogPanel({ onClose }: LogPanelProps) {
           <button className="logpanel__act" title="Empty the ring" onClick={clear}>
             Clear
           </button>
-          <button className="drawer__close" onClick={onClose}>
+          <button className="drawer__close" aria-label="Close" onClick={onClose}>
             <IconClose />
           </button>
         </div>
