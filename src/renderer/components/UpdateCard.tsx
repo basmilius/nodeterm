@@ -162,7 +162,7 @@ export function UpdateCard(): JSX.Element | null {
           </button>
         )}
         {canDismiss && (
-          <button className="update-card__icon" title="Dismiss" onClick={dismiss}>
+          <button className="update-card__icon" title="Dismiss" aria-label="Dismiss" onClick={dismiss}>
             <IconClose />
           </button>
         )}

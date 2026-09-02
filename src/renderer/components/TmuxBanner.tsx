@@ -111,7 +111,7 @@ export function TmuxBanner({ onInstall }: { onInstall: (command: string) => void
           {phase === 'failed' ? 'Retry' : (status.installLabel ?? 'Install tmux')}
         </button>
       )}
-      <button className="announce-banner__close" title="Dismiss" onClick={() => setDismissed(true)}>
+      <button className="announce-banner__close" title="Dismiss" aria-label="Dismiss" onClick={() => setDismissed(true)}>
         <IconClose />
       </button>
     </div>

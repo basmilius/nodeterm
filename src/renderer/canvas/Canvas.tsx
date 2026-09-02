@@ -12120,6 +12120,7 @@ export function Canvas() {
             <button
               className="announce-banner__close"
               title="Dismiss"
+              aria-label="Dismiss"
               onClick={() => setMigrationNote(null)}
             >
               <IconClose />
@@ -12135,6 +12136,7 @@ export function Canvas() {
             <button
               className="announce-banner__close"
               title="Dismiss"
+              aria-label="Dismiss"
               onClick={() => setSyncNote(null)}
             >
               <IconClose />
@@ -12150,6 +12152,7 @@ export function Canvas() {
             <button
               className="announce-banner__close"
               title="Dismiss"
+              aria-label="Dismiss"
               onClick={() => setCopyError(null)}
             >
               <IconClose />
@@ -12169,6 +12172,7 @@ export function Canvas() {
             <button
               className="announce-banner__close"
               title="Dismiss"
+              aria-label="Dismiss"
               onClick={() => setNotice(null)}
             >
               <IconClose />
