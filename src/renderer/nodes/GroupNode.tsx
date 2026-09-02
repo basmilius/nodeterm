@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { IconClose } from '../components/icons'
+import { IconClose, IconUngroup } from '../components/icons'
 import { NodeResizer, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import { NODE_COLORS, ungroupNodes, type CanvasNode } from '../state/workspace'
@@ -300,12 +300,18 @@ export function GroupNode({ id, data, selected }: NodeProps<CanvasNode>) {
       </div>
 
       <div className="group-node__actions nodrag">
-        <button className="group-node__ungroup" title="Ungroup" onClick={ungroup}>
-          ungroup
+        <button
+          className="group-node__ungroup"
+          title="Ungroup"
+          aria-label="Ungroup"
+          onClick={ungroup}
+        >
+          <IconUngroup />
         </button>
         <button
           className="group-node__close"
           title="Remove group (keeps nodes)"
+          aria-label="Remove group"
           onClick={ungroup}
         >
           <IconClose />

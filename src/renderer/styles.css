@@ -70,6 +70,11 @@
   --float-gap: 22px;
   --tabbar-h: 44px;
 
+  /* Outer width of the bottom-left controls column: one button plus the column's 1px border on
+     each side. The pill cluster clears the column by reading this, so resizing the buttons cannot
+     silently drop the pills back on top of them. */
+  --controls-w: 30px;
+
   /* Canvas chrome that lives on React Flow props rather than in a rule. */
   --canvas-dot: #303030;
   --minimap-mask: rgba(10, 12, 18, 0.6);
@@ -5860,9 +5865,10 @@ button.group-node__setup:disabled {
   padding: 0;
 }
 
-.group-node__close {
-  padding: 3px 8px;
-  line-height: 1;
+.group-node__ungroup svg,
+.group-node__close svg {
+  width: 14px;
+  height: 14px;
 }
 
 .group-node__ungroup:hover,
@@ -6177,9 +6183,14 @@ button.group-node__setup:disabled {
 
 /* ---- Canvas controls (bottom-left) ----
    Same plate and --float-gap offset as the other floating chrome; the library's own glyphs are
-   replaced in Canvas.tsx, so these rules only size and color our 16px icons. */
+   replaced in Canvas.tsx, so these rules only size and color our 16px icons.
+   The plate, the blur and the border sit on the COLUMN, matching .dock: with a background on each
+   button instead, the four read as four stacked chips and the border around them had nothing to
+   enclose. */
 .react-flow__controls {
   margin: var(--float-gap) !important;
+  background: rgba(var(--menu-rgb), 0.92);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
@@ -6192,20 +6203,23 @@ button.group-node__setup:disabled {
 }
 
 .react-flow__controls-button {
-  width: 28px;
-  height: 28px;
+  width: calc(var(--controls-w) - 2px);
+  height: calc(var(--controls-w) - 2px);
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--menu-rgb), 0.85);
+  background: transparent;
   border: none;
-  border-bottom: 1px solid var(--border);
   color: var(--text);
 }
 
-.react-flow__controls .tooltip-trigger:last-child .react-flow__controls-button {
-  border-bottom: none;
+/* ONE separator, where there used to be a rule under every button. Zoom in, zoom out and fit view
+   are all camera moves; the lock is a mode toggle, and it is the only one that changes what the
+   other three are allowed to do. The lock already carries its own class, so this needs no
+   nth-child over the Tooltip spans that wrap each button. */
+.react-flow__controls-button.canvas-lock-btn {
+  border-top: 1px solid var(--border);
 }
 
 .react-flow__controls-button svg {
@@ -6301,10 +6315,12 @@ button.group-node__setup:disabled {
    Deliberately carries NO z-index: an absolutely positioned box with `z-index: auto` establishes no
    stacking context, so each pill's own z-index (5 / 13 / 26 / 60) keeps competing with the sessions
    sidebar and the kanban overlay exactly as it did when each was anchored on its own. Do not add
-   z-index, transform, filter or opacity here — any of them would trap both pills below the sidebar. */
+   z-index, transform, filter or opacity here — any of them would trap both pills below the sidebar.
+   The left offset clears the controls column, which shares this corner: --controls-w plus the 12px
+   the other chrome already uses between two adjacent clusters (see .resume-card). */
 .canvas-pills {
   position: absolute;
-  left: var(--float-gap);
+  left: calc(var(--float-gap) + var(--controls-w) + 12px);
   bottom: var(--float-gap);
   display: flex;
   align-items: center;
