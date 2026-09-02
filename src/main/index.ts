@@ -934,7 +934,11 @@ function createWindow(): BrowserWindow {
     // never mistaken for the real one (the dock already shows the Electron icon in dev).
     title: NT_MULTI ? 'node-terminal (test instance)' : 'node-terminal',
     icon: linuxIcon,
-    // Integrate the macOS traffic lights into our top bar (modern Mac app look).
+    // Integrate the macOS traffic lights into our top bar (modern Mac app look). Both options are
+    // macOS-only and Electron ignores them elsewhere, so Windows/Linux keep their NATIVE title bar
+    // — deliberately: a frameless window with a Window Controls Overlay was tried and reverted, it
+    // loses the native frame's shadow. What issue #564 is really about is the 86px the RENDERER
+    // reserved for these buttons on every platform, and that is fixed there (`--titlebar-inset-left`).
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 15 },
     webPreferences: {

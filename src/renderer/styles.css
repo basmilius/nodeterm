@@ -191,14 +191,25 @@ body,
 }
 
 /* ---- Top project tab bar ---- */
+/* Room the OS wants INSIDE our own title bar, because the tab bar IS the title bar and macOS
+   paints the traffic lights over it (issue #564). Zero by default: Windows and Linux keep their
+   native title bar with the buttons in it, and a Server Edition browser tab has no controls of
+   ours on any OS. Claimed by the one class `lib/windowChrome.ts` stamps on <html>. */
+:root {
+  --titlebar-inset-left: 0px;
+}
+
+html.mac-traffic-lights {
+  --titlebar-inset-left: 74px;
+}
+
 .tabbar {
   position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
   height: 44px;
-  /* Leave room for the macOS traffic lights on the left. */
-  padding: 0 12px 0 86px;
+  padding: 0 12px 0 calc(12px + var(--titlebar-inset-left));
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   /* Above the canvas and the menu backdrop so tabs/inputs stay interactive. */

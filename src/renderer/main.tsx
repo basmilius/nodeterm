@@ -39,6 +39,15 @@ async function bootstrap(): Promise<void> {
       ])
     setWebglBudget(isMacPlatform() ? WEBGL_BUDGET_DESKTOP_MAC : WEBGL_BUDGET_DESKTOP)
   }
+  // Reserve room for the macOS traffic lights, and ONLY where they exist — not on Windows/Linux,
+  // whose buttons live in their own native title bar, and not in a browser tab. Before `./boot` so
+  // the first paint already has the right inset; `isBrowserRuntime` is settled by the branch above.
+  const [{ applyWindowChromeClasses }, { isBrowserRuntime }, { isMacPlatform }] = await Promise.all([
+    import('./lib/windowChrome'),
+    import('./bridge/runtime'),
+    import('../shared/platform-utils')
+  ])
+  applyWindowChromeClasses(isBrowserRuntime(), isMacPlatform())
   await import('./boot')
 }
 void bootstrap()
