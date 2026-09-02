@@ -128,6 +128,7 @@ export function PtyPressureBanner({
       <button
         className="announce-banner__close"
         title="Dismiss"
+        aria-label="Dismiss"
         onClick={() => setDismissed({ level: reading.level, seq: state!.seq })}
       >
         <IconClose />

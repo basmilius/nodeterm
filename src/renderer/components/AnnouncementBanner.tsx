@@ -72,7 +72,7 @@ export function AnnouncementBanner(): JSX.Element | null {
           Learn more
         </button>
       )}
-      <button className="announce-banner__close" title="Dismiss" onClick={dismiss}>
+      <button className="announce-banner__close" title="Dismiss" aria-label="Dismiss" onClick={dismiss}>
         <IconClose />
       </button>
     </div>
