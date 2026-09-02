@@ -12475,26 +12475,28 @@ export function Canvas() {
               default modes. */}
           {glyphLayerActive && <SharedGlyphLayer />}
           {/* The library's own zoom/fit glyphs are swapped for the shared icon set so this cluster
-              matches every other floating control; the actions behind them are unchanged. */}
+              matches every other floating control; the actions behind them are unchanged. The
+              tooltips open to the RIGHT rather than upward like the dock's: this is a vertical
+              stack, so an upward bubble covers the button above the one being pointed at. */}
           <Controls showZoom={false} showFitView={false} showInteractive={false} position="bottom-left">
-            <Tooltip label="Zoom in" placement="top">
+            <Tooltip label="Zoom in" placement="right">
               <ControlButton aria-label="Zoom in" onClick={() => zoomIn({ duration: ZOOM_STEP_DURATION_MS })}>
                 <IconPlus />
               </ControlButton>
             </Tooltip>
-            <Tooltip label="Zoom out" placement="top">
+            <Tooltip label="Zoom out" placement="right">
               <ControlButton aria-label="Zoom out" onClick={() => zoomOut({ duration: ZOOM_STEP_DURATION_MS })}>
                 <IconMinus />
               </ControlButton>
             </Tooltip>
-            <Tooltip label="Fit view" placement="top">
+            <Tooltip label="Fit view" placement="right">
               <ControlButton aria-label="Fit view" onClick={fitAll}>
                 <IconFit />
               </ControlButton>
             </Tooltip>
             <Tooltip
               label={canvasLocked ? 'Unlock view (pan/zoom)' : 'Lock view (pan/zoom); nodes stay movable'}
-              placement="top"
+              placement="right"
             >
               <ControlButton
                 className={`canvas-lock-btn${canvasLocked ? ' locked' : ''}`}
