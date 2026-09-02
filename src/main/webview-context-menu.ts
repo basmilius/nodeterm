@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from 'electron'
+import { tidySeparators } from '@shared/menu-separators'
 
 /**
  * The context menu for a <webview> guest (browser and web nodes).
@@ -58,23 +59,11 @@ export const SPELLING_SUGGESTION_MAX = 5
 
 const SEPARATOR: MenuItemConstructorOptions = { type: 'separator' }
 
-const isHttpUrl = (url: string): boolean => /^https?:\/\//i.test(url)
-
 /**
- * Drop leading, trailing and doubled separators, so a section that contributed nothing leaves no
- * rule behind. Same rule as the renderer's own menus (`tidySeparators` in lib/ui-visibility.ts),
- * duplicated rather than shared because the renderer may not import `src/main`.
+ * The scheme gate for the two link rows. The caller re-checks it at the point of use as well: the
+ * URL is page-controlled content and this check is compile-time invisible from there.
  */
-function tidy(items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] {
-  const out: MenuItemConstructorOptions[] = []
-  for (const item of items) {
-    if (item.type === 'separator' && out.length === 0) continue
-    if (item.type === 'separator' && out[out.length - 1]?.type === 'separator') continue
-    out.push(item)
-  }
-  while (out.length > 0 && out[out.length - 1]?.type === 'separator') out.pop()
-  return out
-}
+export const isHttpUrl = (url: string): boolean => /^https?:\/\//i.test(url)
 
 /**
  * Build the guest's context menu.
@@ -138,5 +127,5 @@ export function guestContextMenuTemplate(
     { label: 'Inspect Element', click: () => handlers.inspect() }
   )
 
-  return tidy(items)
+  return tidySeparators(items)
 }

@@ -408,6 +408,7 @@ import { buildClosedSessionEntries, stateToReopenSnapshot } from '../lib/closedH
 import { uuid } from '../lib/uuid'
 import { planReopen, type ReopenPlan } from '../lib/reopenPlan'
 import { oneLine } from '@shared/one-line'
+import { tidySeparators } from '@shared/menu-separators'
 import { parseLenses, verifyLensPrompt, verifySynthesisPrompt } from '../lib/verifyPanel'
 import { useSettings } from '../state/settings'
 import { activePermissionMode, projectPermissionMode } from '../state/permissionMode'
@@ -714,19 +715,6 @@ const restartAgentIdOf = (n: Node | undefined): AgentId | undefined =>
 
 /** Stable empty card list, so the closed board's memo never churns array identity. */
 const NO_KANBAN_SESSIONS: KanbanSession[] = []
-
-/** Drop the separators a hidden row leaves dangling: the menu's rules are written between blocks,
- *  so hiding every row of a block would otherwise emit two rules in a row (or one hanging at the
- *  top / bottom). Also drops a rule directly under a section label, which reads as a double line.
- *  Cheap and total, so the builders can stay plain array literals instead of tracking what is left. */
-const tidySeparators = (items: MenuItem[]): MenuItem[] =>
-  items
-    .filter((item, i, all) => {
-      if (item.type !== 'separator') return true
-      const prev = all[i - 1]
-      return !!prev && prev.type !== 'separator' && prev.type !== 'label'
-    })
-    .filter((item, i, all) => item.type !== 'separator' || i < all.length - 1)
 
 // The minimap subscribes to agent status HERE, in its own tiny component — not in Canvas.
 // Canvas must not subscribe to the whole status map (every working/waiting flip would re-render
@@ -7052,7 +7040,7 @@ export function Canvas() {
     // debugger + drops the ledger entry), not just hides the chip. Read fresh, like every other row.
     const drivenHere =
       ids.length === 1 && drivingNodeIds(useBrowserLease.getState().entries, Date.now()).has(ids[0])
-    return tidySeparators([
+    return tidySeparators<MenuItem>([
       { type: 'label', label: ids.length > 1 ? `${ids.length} nodes` : '1 node' },
       ...(drivenHere
         ? ([
@@ -7632,7 +7620,7 @@ export function Canvas() {
       const groupHidden = isHidden('group', useSettings.getState().settings.hiddenNodeMenuItems)
       // The group frame has its own colors strip; it answers to the same "Colors" toggle as the
       // node menu, so hiding it in Settings hides it everywhere a right-click can reach it.
-      return tidySeparators([
+      return tidySeparators<MenuItem>([
         { type: 'label', label: 'Group' },
         ...(canAddSelection && !groupHidden
           ? [

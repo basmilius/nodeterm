@@ -17,7 +17,7 @@ installLogSink(logBuffer)
 import { writeFilesToClipboard } from './clipboard-files'
 import { pickProjectIcon } from './project-icon-upload'
 import { allowGuestNavigation } from './webview-nav'
-import { guestContextMenuTemplate } from './webview-context-menu'
+import { guestContextMenuTemplate, isHttpUrl } from './webview-context-menu'
 import { BrowserControlLedger } from './browser-control-ledger'
 import {
   recordOpenProjectGrant,
@@ -1155,7 +1155,7 @@ app.whenReady().then(async () => {
     // live at call time, so a guest registered later (on dom-ready) is seen when a popup fires.
     contents.setWindowOpenHandler(({ url }) => {
       const sourceNodeId = browserGuests.get(contents.id)?.nodeId
-      if (sourceNodeId && /^https?:\/\//i.test(url)) {
+      if (sourceNodeId && isHttpUrl(url)) {
         sendToMain(IPC.browserNewWindow, { url, sourceNodeId })
       }
       return { action: 'deny' }
@@ -1183,10 +1183,13 @@ app.whenReady().then(async () => {
           back: () => contents.navigationHistory.goBack(),
           forward: () => contents.navigationHistory.goForward(),
           reload: () => contents.reload(),
-          // Same route a popup takes: a new browser node, never a real window.
+          // Same route a popup takes: a new browser node, never a real window. The scheme is
+          // re-checked HERE, not only where the template gated the row: the URL is page-controlled
+          // content and it ends up as a <webview src>, so the guarantee has to be local to the
+          // dangerous call rather than compile-time invisible from it.
           openLinkInNode: (url) => {
             const sourceNodeId = browserGuests.get(contents.id)?.nodeId
-            if (sourceNodeId) sendToMain(IPC.browserNewWindow, { url, sourceNodeId })
+            if (sourceNodeId && isHttpUrl(url)) sendToMain(IPC.browserNewWindow, { url, sourceNodeId })
           },
           copyText: (text) => clipboard.writeText(text),
           copyImage: () => contents.copyImageAt(params.x, params.y),
@@ -1194,6 +1197,8 @@ app.whenReady().then(async () => {
           inspect: () => contents.inspectElement(params.x, params.y)
         }
       )
+      // Do not drop the `frame` argument to simplify this call: it is what makes AppKit contribute
+      // its AutoFill, Writing Tools and Services submenus, which are off by default in Electron.
       // `frame` is null once the frame navigated away or died; the menu still opens, just without
       // the AppKit additions.
       Menu.buildFromTemplate(template).popup(params.frame ? { frame: params.frame } : {})
