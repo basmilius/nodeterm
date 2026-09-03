@@ -271,12 +271,26 @@ export function BrowserSurface({
   return (
     <div className="browser-surface" ref={rootRef}>
       <div className="browser-node__toolbar nodrag">
-        <button className="browser-node__btn" disabled={!canBack} onClick={() => ref.current?.goBack()} title="Back">
-          <IconArrowLeft />
-        </button>
-        <button className="browser-node__btn" disabled={!canFwd} onClick={() => ref.current?.goForward()} title="Forward">
-          <IconArrowRight />
-        </button>
+        <Tooltip label="Back">
+          <button
+            className="browser-node__btn"
+            aria-label="Back"
+            disabled={!canBack}
+            onClick={() => ref.current?.goBack()}
+          >
+            <IconArrowLeft />
+          </button>
+        </Tooltip>
+        <Tooltip label="Forward">
+          <button
+            className="browser-node__btn"
+            aria-label="Forward"
+            disabled={!canFwd}
+            onClick={() => ref.current?.goForward()}
+          >
+            <IconArrowRight />
+          </button>
+        </Tooltip>
         <Tooltip label={loading ? 'Stop loading' : 'Reload (hold Shift to bypass the cache)'}>
           <button
             className="browser-node__btn"
