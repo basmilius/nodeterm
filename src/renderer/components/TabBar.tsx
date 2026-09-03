@@ -368,54 +368,58 @@ export function TabBar({
                   </span>
                 )}
 
-                {active && editingId !== p.id && (
-                  // On the ACTIVE tab only: the toggle says which view you are looking at, and
-                  // on an inactive tab it would flip a project's view without taking you there.
-                  // The title was a hardcoded `(⌘⇧B)` — mac glyphs shown to Linux/Windows users
-                  // (a pre-existing bug: it was never even hintLabel-wrapped), and stale after a
-                  // remap. `commandTooltip` fixes both and drops the chord entirely when the
-                  // command is unbound.
-                  <button
-                    className="tab__board-toggle"
-                    title={commandTooltip(
-                      kanbanActive ? 'Canvas view' : 'Kanban view',
-                      'view.kanbanToggle'
-                    )}
-                    aria-label={kanbanActive ? 'Canvas view' : 'Kanban view'}
-                    onClick={(e) => {
-                      e.stopPropagation() // a tab click switches projects, this only flips the view
-                      const vm = useViewMode.getState()
-                      const settings = useSettings.getState().settings
-                      const omni = isOmniKanbanEnabled(settings)
-                      const asDefault = settings.omniKanbanAsDefault === true
-                      // Closing: global overlay is exclusive — any board toggle while it's open closes it.
-                      if (vm.globalKanban) {
-                        vm.toggleGlobalKanban()
-                        return
-                      }
-                      if (omni && asDefault) {
-                        vm.toggleGlobalKanban()
-                      } else {
-                        vm.toggle(p.id)
-                      }
-                    }}
-                  >
-                    {kanbanActive ? <IconCanvasView /> : <IconKanban />}
-                  </button>
-                )}
                 {editingId !== p.id && (
-                  <button
-                    className="tab__caret"
-                    title="Project options"
-                    aria-label="Project options"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (menuId === p.id) closeMenu()
-                      else openMenu(p.id, e.currentTarget)
-                    }}
-                  >
-                    <IconMoreVertical />
-                  </button>
+                  // The actions are one cluster with its own rhythm, not two more items in the
+                  // tab's label row: they sit a hair apart from each other and further from the
+                  // name than the name's own parts sit from one another.
+                  <span className="tab__actions">
+                    {active && (
+                      // On the ACTIVE tab only: the toggle says which view you are looking at, and
+                      // on an inactive tab it would flip a project's view without taking you
+                      // there. The chord comes from `commandTooltip`, so a remap or an unbound
+                      // command is not advertised as a chord that no longer works.
+                      <button
+                        className="tab__board-toggle"
+                        title={commandTooltip(
+                          kanbanActive ? 'Canvas view' : 'Kanban view',
+                          'view.kanbanToggle'
+                        )}
+                        aria-label={kanbanActive ? 'Canvas view' : 'Kanban view'}
+                        onClick={(e) => {
+                          e.stopPropagation() // a tab click switches projects, this flips the view
+                          const vm = useViewMode.getState()
+                          const settings = useSettings.getState().settings
+                          const omni = isOmniKanbanEnabled(settings)
+                          const asDefault = settings.omniKanbanAsDefault === true
+                          // Closing: the global overlay is exclusive, so any board toggle while
+                          // it is open closes it.
+                          if (vm.globalKanban) {
+                            vm.toggleGlobalKanban()
+                            return
+                          }
+                          if (omni && asDefault) {
+                            vm.toggleGlobalKanban()
+                          } else {
+                            vm.toggle(p.id)
+                          }
+                        }}
+                      >
+                        {kanbanActive ? <IconCanvasView /> : <IconKanban />}
+                      </button>
+                    )}
+                    <button
+                      className="tab__caret"
+                      title="Project options"
+                      aria-label="Project options"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (menuId === p.id) closeMenu()
+                        else openMenu(p.id, e.currentTarget)
+                      }}
+                    >
+                      <IconMoreVertical />
+                    </button>
+                  </span>
                 )}
               </div>
             )
