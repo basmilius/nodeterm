@@ -922,6 +922,26 @@ session.
   (`media.allowSsh`) then played the same way.
 - **web** (`WebNode.tsx`) — an Electron `<webview>` (locked down, no `nodeintegration`) that loads
   a live `data.url`, or serves local html at `data.filePath` over `nt-media://`.
+  **It sizes itself to its page, once.** A node opened at the old fixed 720×520 showed a corner of
+  every report an agent rendered, so the user resized every one by hand. It now opens at
+  `settings.webNodeWidth` (Behavior, default 1280) and, on its FIRST load, asks the guest for
+  `document.documentElement.scrollHeight` and grows to it, held under `settings.webNodeMaxHeight`
+  (default 3000 — a live site is routinely tens of thousands of pixels tall). Rules a refactor must
+  not undo: the WIDTH is never measured (a `<webview>` lays the page out to the width it is given,
+  so `scrollWidth` returns what we just handed it; the width is a choice, only the height is a
+  measurement); the chrome around the guest is MEASURED (`offsetHeight`, which the canvas transform
+  does not scale) rather than assumed, so changing the node header cannot silently start cutting
+  pages off; every failure answers "leave it alone" (`webNodeFitHeight` → null), because a node at
+  the size it opened with is always safe and a guessed height is not; and the resize follows the
+  same three rules `withNodeRect` does — clear `measured`, keep `expandedHeight` in step, and
+  `markWorkspaceDirty()` because a direct `setNodes` bypasses `handleNodesChange`.
+  **`data.fitToContent` is deliberately NOT serialized** (absent from `flowToNodeStates`, like
+  `initialCommand`): it must mean "opened moments ago and not yet looked at", so a node the user has
+  since resized is never re-fitted behind their back on a later app run. Surfaces: desktop full;
+  Server Edition keeps the configured width and the opening height (there is no `<webview>` and no
+  `executeJavaScript` there, and the code degrades to doing nothing rather than guessing); mobile
+  N/A. `browser` nodes deliberately do NOT do this — you navigate them, and a node that re-sized
+  itself on every page would move under your hands.
 - **browser** (`BrowserNode.tsx`) — a navigable Chromium browser wrapping the shared
   `BrowserSurface` (webview + toolbar); the last top-level URL persists to `data.url`, and the same
   surface backs the kanban card modal's browser popup.

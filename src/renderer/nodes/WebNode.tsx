@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
+import { PAGE_HEIGHT_EXPRESSION, webNodeFitHeight } from '../lib/webNodeFit'
+import { webNodeBounds } from '../state/workspace'
 import type { CanvasNode } from '../state/workspace'
 import { httpUrl } from './webUrl'
 import { useDiscardWhenHidden, webviewAudible, type AudibleWebview } from './useDiscardWhenHidden'
@@ -10,6 +12,7 @@ import { describeLoadFailure, isReportableFailure, type WebviewLoadFailure } fro
 import { WebviewErrorPlate } from './WebviewErrorPlate'
 import { WebviewLoadingBar } from './WebviewLoadingBar'
 import { useWebviewKeepAlive } from '../state/webviewKeepAlive'
+import { markWorkspaceDirty } from '../state/workspaceDirty'
 
 /**
  * A web view node. When `data.url` is set it loads that live URL; otherwise it serves the
@@ -18,7 +21,7 @@ import { useWebviewKeepAlive } from '../state/webviewKeepAlive'
  * The frame/header mirror {@link VideoNode}/EditorNode for consistent drag/resize/close behavior.
  */
 export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
-  const { deleteElements } = useReactFlow()
+  const { deleteElements, setNodes } = useReactFlow()
   const [src, setSrc] = useState('')
   /** We never got as far as handing the guest a source: an unusable scheme, or a media grant that
    *  was refused. Distinct from `failure`, which is a page that was attempted and did not load. */
@@ -29,6 +32,9 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
   const filePath = (data.filePath as string) ?? ''
   const title = (data.title as string) || url || filePath.split('/').pop() || 'web'
   const rootRef = useRef<HTMLDivElement | null>(null)
+  /** Whether this node still owes itself a grow-to-fit. A ref, not state: the load handler reads it
+   *  and clears it in the same turn, and a re-render in between would fit twice. */
+  const fitPendingRef = useRef(data.fitToContent === true)
   /** The guest, for the audible check only — a local html page can hold a playing <video>. */
   const wvRef = useRef<(AudibleWebview & ReloadableWebview) | null>(null)
   // Memory saver — the same shared hook {@link BrowserSurface} uses: hidden long enough, the
@@ -94,6 +100,66 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
   // condition is what would let those two drift.
   const live = !!src && !discarded && !restoring
 
+  /**
+   * Grow the node to the height its page needs, ONCE, on the first load after it was created.
+   *
+   * `data.fitToContent` is set by `createWebNode` and is not serialized, so the window it is true
+   * in is exactly "this node was just opened and has not been looked at yet". A node the user has
+   * since resized, or one restored from disk, never carries it and is never touched again.
+   *
+   * The chrome around the guest is MEASURED (`offsetHeight`, which the canvas transform does not
+   * scale) rather than assumed, so changing the node's header cannot silently start cutting pages
+   * off. Every failure answers "leave it alone": no webview, no `executeJavaScript` (there is none
+   * outside Electron, so the Server Edition keeps the size it opened at), a guest that throws, or a
+   * measurement `webNodeFitHeight` cannot use.
+   */
+  const fitToPage = async (): Promise<void> => {
+    // A background keep-alive GHOST is not in the canvas `setNodes` addresses, and resizing one
+    // would mean nothing anyway: it is parked at the origin behind `display:none`. A node cannot
+    // be a ghost on its first load, so this only ever guards a future caller.
+    if (!fitPendingRef.current || data.ghost === true) return
+    const wv = wvRef.current as unknown as
+      | { executeJavaScript?: (code: string) => Promise<unknown>; offsetHeight?: number }
+      | null
+    const root = rootRef.current
+    if (!wv?.executeJavaScript || !root || !wv.offsetHeight) return
+    fitPendingRef.current = false
+    let pageHeight = 0
+    try {
+      pageHeight = Number(await wv.executeJavaScript(PAGE_HEIGHT_EXPRESSION))
+    } catch {
+      return
+    }
+    const currentHeight = root.offsetHeight
+    const next = webNodeFitHeight({
+      pageHeight,
+      chromeHeight: currentHeight - wv.offsetHeight,
+      currentHeight,
+      maxHeight: webNodeBounds().maxHeight,
+      minHeight: NODE_MIN_SIZES.web.height
+    })
+    if (next === null) return
+    setNodes((nodes) =>
+      nodes.map((node) =>
+        node.id === id
+          ? {
+              ...node,
+              height: next,
+              style: { ...node.style, height: next },
+              // Same three rules `withNodeRect` follows for every other programmatic resize:
+              // drop the stale measurement (flowToNodeStates prefers `measured` over `height`, so
+              // a commit racing the re-measure would persist the old size), keep
+              // `expandedHeight` in step (it is what collapse restores to), and mark the workspace
+              // dirty below because a direct setNodes bypasses handleNodesChange.
+              measured: undefined,
+              data: { ...node.data, expandedHeight: next, fitToContent: undefined }
+            }
+          : node
+      )
+    )
+    markWorkspaceDirty()
+  }
+
   // The guest's own load lifecycle. Without it a node whose page refuses the connection sits on
   // Chromium's error page behind our chrome, saying nothing the node can act on. `live` is the dep
   // because that is exactly when the element mounts and unmounts; a src change reuses it.
@@ -109,6 +175,7 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
     const onStop = (): void => {
       loadingRef.current = false
       setLoading(false)
+      void fitToPage()
     }
     const onFail = (e: Event): void => {
       const ev = e as unknown as {

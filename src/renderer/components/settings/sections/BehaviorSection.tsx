@@ -29,6 +29,10 @@ const ROWS = {
     title: 'Default node size',
     keywords: ['node', 'size', 'width', 'height', 'terminal', 'default']
   },
+  webNodeSize: {
+    title: 'Web node size',
+    keywords: ['web', 'webview', 'node', 'size', 'width', 'height', 'page', 'website', 'browser']
+  },
   snap: { title: 'Snap to grid', keywords: ['snap', 'grid', 'align'] },
   autoAlign: {
     title: 'Snap to grid mode (auto-arrange)',
@@ -160,6 +164,31 @@ export function BehaviorSection({ isActive }: { isActive: boolean }): React.JSX.
                 max={1600}
                 step={20}
                 onChange={(v) => update({ defaultNodeHeight: v || 440 })}
+              />
+            </div>
+          }
+        />
+      </SearchableRow>
+      <SearchableRow {...ROWS.webNodeSize}>
+        <FieldRow
+          label="Web node size (px)"
+          description="Width a new web node opens at, and the tallest it may grow to. It measures its page after loading and grows to fit, so you do not have to resize it by hand."
+          control={
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <NumberField
+                value={settings.webNodeWidth}
+                min={320}
+                max={2400}
+                step={20}
+                onChange={(v) => update({ webNodeWidth: v || 1280 })}
+              />
+              <span style={{ opacity: 0.6 }}>× max</span>
+              <NumberField
+                value={settings.webNodeMaxHeight}
+                min={240}
+                max={6000}
+                step={100}
+                onChange={(v) => update({ webNodeMaxHeight: v || 3000 })}
               />
             </div>
           }
