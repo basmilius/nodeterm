@@ -276,6 +276,9 @@ body,
 .tabbar__projects {
   display: flex;
   align-items: stretch;
+  /* The bar centers its items, so without this the wrapper is only as tall as its content and the
+     tabs stretch to THAT — they have to reach the bar's own top and bottom to read as tabs. */
+  align-self: stretch;
   gap: 4px;
   flex: 1;
   /* Load-bearing (issue #375): a flex item's min-width defaults to `auto`, which resolves against
@@ -446,6 +449,15 @@ body,
   outline: none;
 }
 
+/* The two tab actions read as one cluster: a hair between them, and a wider step from the name
+   than the 7px the tab's own parts (dot, name, badge) sit apart. */
+.tab__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: 3px;
+}
+
 .tab__board-toggle,
 .tab__caret {
   display: inline-flex;
@@ -456,7 +468,13 @@ body,
   color: currentColor;
   cursor: pointer;
   line-height: 1;
-  padding: 2px;
+  /* A fixed box, not padding around the glyph: these two sit side by side and their glyphs fill
+     very different amounts of a 14px square — the board's bars run edge to edge, the three dots
+     stand alone in the middle — so a padded box would give them hover plates of two widths and
+     read as two kinds of control. */
+  width: 22px;
+  height: 22px;
+  padding: 0;
   border-radius: 5px;
   /* Reachable on every tab, not only the active one, so it is never hidden: an affordance that
      appears on hover cannot be found by someone who does not already know it is there. */
@@ -486,8 +504,8 @@ body,
   /* Load-bearing: without this a squeezed bar shrinks the 28px + instead of scrolling the tabs. */
   flex-shrink: 0;
   /* Its own breathing room now the strip runs at `gap: 0` — "+" is a separate action, not the
-     next tab in the row. */
-  margin-left: 8px;
+     next tab in the row. Small: it belongs to the strip it ends, not to the empty bar beside it. */
+  margin-left: 2px;
   width: 28px;
   height: 28px;
   background: transparent;
