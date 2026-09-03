@@ -212,6 +212,23 @@ export function TabBar({
       ?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
   }, [activeId, projects.length])
 
+  // The backdrop deliberately sits BELOW the bar, so a click on another tab switches to it in one
+  // go instead of being swallowed as a dismiss — which leaves the bar itself (its empty stretch,
+  // the brand, the +) unable to close the menu. This covers exactly that gap, and it closes
+  // WITHOUT consuming the event, so the click still lands wherever it was aimed.
+  useEffect(() => {
+    if (!menuId) return
+    const onDown = (e: PointerEvent): void => {
+      const el = e.target as HTMLElement | null
+      // The caret owns its own toggle; closing here first would let its click re-open the menu.
+      if (el?.closest('.tab-menu, .tab__caret')) return
+      closeMenu()
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuId])
+
   return (
     <>
       {(menuId || editingId) && (

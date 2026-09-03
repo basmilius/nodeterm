@@ -115,6 +115,28 @@ describe('TabBar caret menu', () => {
     // …and the menu closes behind it, like every other action in this menu.
     expect(document.querySelector('.tab-menu')).toBeNull()
   })
+
+  it('closes on a press anywhere outside it, including the bar the menu hangs from', async () => {
+    // The dismiss backdrop is below the bar so a click on another tab still switches projects,
+    // which leaves the bar itself unable to close the menu without this.
+    expect(document.querySelector('.tab-menu')).not.toBeNull()
+    await act(async () => {
+      host
+        .querySelector('.tabbar')!
+        .dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    })
+    expect(document.querySelector('.tab-menu')).toBeNull()
+  })
+
+  it('leaves the caret to its own toggle, so pressing it while open does not reopen the menu', async () => {
+    const caret = host.querySelector<HTMLButtonElement>('.tab__caret')!
+    await act(async () => {
+      caret.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    })
+    expect(document.querySelector('.tab-menu')).not.toBeNull()
+    await click(caret)
+    expect(document.querySelector('.tab-menu')).toBeNull()
+  })
 })
 describe('TabBar New-project pin', () => {
   let root: Root
