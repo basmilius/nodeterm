@@ -369,6 +369,8 @@ export function TabBar({
                 )}
 
                 {active && editingId !== p.id && (
+                  // On the ACTIVE tab only: the toggle says which view you are looking at, and
+                  // on an inactive tab it would flip a project's view without taking you there.
                   // The title was a hardcoded `(⌘⇧B)` — mac glyphs shown to Linux/Windows users
                   // (a pre-existing bug: it was never even hintLabel-wrapped), and stale after a
                   // remap. `commandTooltip` fixes both and drops the chord entirely when the
@@ -379,6 +381,7 @@ export function TabBar({
                       kanbanActive ? 'Canvas view' : 'Kanban view',
                       'view.kanbanToggle'
                     )}
+                    aria-label={kanbanActive ? 'Canvas view' : 'Kanban view'}
                     onClick={(e) => {
                       e.stopPropagation() // a tab click switches projects, this only flips the view
                       const vm = useViewMode.getState()
