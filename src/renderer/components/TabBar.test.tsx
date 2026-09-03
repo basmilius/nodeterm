@@ -342,6 +342,7 @@ describe('TabBar accent dot', () => {
   let host: HTMLElement
 
   const mount = async (over: Partial<Project>): Promise<void> => {
+    const { TabBar, useProjects } = await load()
     useProjects.setState({ projects: [project(over)], activeProjectId: 'p1' })
     root = createRoot(host)
     await act(async () => {
@@ -364,9 +365,6 @@ describe('TabBar accent dot', () => {
   }
 
   beforeEach(() => {
-    ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = NoopResizeObserver
-    Element.prototype.scrollIntoView = (): void => {}
-    ;(window as unknown as { nodeTerminal: any }).nodeTerminal = {}
     host = document.createElement('div')
     document.body.appendChild(host)
   })
@@ -374,7 +372,6 @@ describe('TabBar accent dot', () => {
   afterEach(() => {
     act(() => root.unmount())
     host.remove()
-    useProjects.setState({ projects: [], activeProjectId: '' })
   })
 
   // A glyph identifies the project better than a colour ever did, and beside one the dot was the
