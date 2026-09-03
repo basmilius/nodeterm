@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Tooltip } from '../components/Tooltip'
-import { IconClose, IconOpenExternal } from '../components/icons'
+import { IconClose, IconOpenExternal, IconReload } from '../components/icons'
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
 import type { CanvasNode } from '../state/workspace'
@@ -184,13 +184,15 @@ export default function WebNode({ id, data, selected }: NodeProps<CanvasNode>) {
         </span>
         <span className="term-node__spacer" />
         {live && (
-          <button
-            className="term-node__close"
-            title="Reload (Shift to bypass the cache)"
-            onClick={(e) => reloadWebview(wvRef.current, e.shiftKey)}
-          >
-            ⟳
-          </button>
+          <Tooltip label="Reload (hold Shift to bypass the cache)">
+            <button
+              className="term-node__refresh"
+              aria-label="Reload"
+              onClick={(e) => reloadWebview(wvRef.current, e.shiftKey)}
+            >
+              <IconReload />
+            </button>
+          </Tooltip>
         )}
         {url && (
           <Tooltip label="Open in browser">
