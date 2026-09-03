@@ -230,7 +230,6 @@ describe('TabBar drag-reorder', () => {
   afterEach(() => {
     act(() => root.unmount())
     host.remove()
-    useProjects.setState({ projects: [], activeProjectId: '' })
   })
 
   it('drops a tab before the one it was released on', async () => {
@@ -270,9 +269,7 @@ describe('TabBar options button', () => {
   let host: HTMLElement
 
   beforeEach(async () => {
-    ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = NoopResizeObserver
-    Element.prototype.scrollIntoView = (): void => {}
-    ;(window as unknown as { nodeTerminal: any }).nodeTerminal = {}
+    const { TabBar, useProjects } = await load()
     host = document.createElement('div')
     document.body.appendChild(host)
     useProjects.setState({
@@ -302,7 +299,6 @@ describe('TabBar options button', () => {
   afterEach(() => {
     act(() => root.unmount())
     host.remove()
-    useProjects.setState({ projects: [], activeProjectId: '' })
   })
 
   it('sits on every tab, so the menu is reachable without activating it first', () => {
