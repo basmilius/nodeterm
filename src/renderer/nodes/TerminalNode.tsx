@@ -137,7 +137,7 @@ import { WakeInputBuffer } from '../terminal/wake-input-buffer'
 import { FindBar } from '../components/FindBar'
 import { IconChat, IconChevronDown, IconChevronRight, IconClose, IconEye, IconEyeOff, IconGrid, IconMic, IconMoveTo, IconPlay, IconReload, IconSearch, IconSparkle } from '../components/icons'
 import { NodeLabels } from '../components/kanban/NodeLabels'
-import { Tooltip } from '../components/Tooltip'
+import { Tooltip, useTooltip } from '../components/Tooltip'
 import { useTerminalSearch } from '../terminal/useTerminalSearch'
 import { useCopyFeedback } from '../terminal/useCopyFeedback'
 import { ContextMeter } from '../components/ContextMeter'
@@ -1433,6 +1433,18 @@ export function TerminalNode({
   const showStatus = !!agentId && hasHooks(agentId) // status badge + session-title capture
   const showLoop = !!agentId && canRecur(agentId) // /loop · /schedule · /cron chrome
   const contextLinkCapable = !!agentId && canContextLink(agentId) // context-link tip wording only; handles render on all terminals
+  const linkOutTip = useTooltip(
+    contextLinkCapable
+      ? "Link out — drag to another Claude node so they can read each other's context"
+      : 'Link out — drag to a sticky note to attach it as context',
+    { placement: 'top' }
+  )
+  const linkInTip = useTooltip(
+    contextLinkCapable
+      ? 'Link in — drop a link here to share context with this Claude session'
+      : 'Link in — drop a sticky note link here to attach it as context',
+    { placement: 'top' }
+  )
   const showUsage = !!agentId && hasUsage(agentId) // per-node context-window meter
   const showChat = !!agentId && canChat(agentId) // Cmd+M opens a chat panel instead of markdown
   // Everything that reads the conversation through CLAUDE's transcript readers (`context.ensure`'s
@@ -4834,23 +4846,17 @@ export function TerminalNode({
         type="source"
         position={Position.Right}
         className="bridge-handle bridge-handle--out"
-        data-tip={
-          contextLinkCapable
-            ? "Link out — drag to another Claude node so they can read each other's context"
-            : 'Link out — drag to a sticky note to attach it as context'
-        }
+        {...linkOutTip.triggerProps}
       />
+      {linkOutTip.bubble}
       <Handle
         id="link-in"
         type="target"
         position={Position.Left}
         className="bridge-handle bridge-handle--in"
-        data-tip={
-          contextLinkCapable
-            ? 'Link in — drop a link here to share context with this Claude session'
-            : 'Link in — drop a sticky note link here to attach it as context'
-        }
+        {...linkInTip.triggerProps}
       />
+      {linkInTip.bubble}
 
       <div className="term-node__header">
         <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>

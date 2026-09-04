@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Tooltip } from '../components/Tooltip'
+import { Tooltip, useTooltip } from '../components/Tooltip'
 import { IconChevronDown, IconChevronRight, IconClose } from '../components/icons'
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { NODE_MIN_SIZES } from '../lib/nodeSizing'
@@ -15,6 +15,8 @@ import { relativeTime } from '../lib/relativeTime'
 export function StickyNode({ id, data, selected }: NodeProps<CanvasNode>) {
   const { updateNodeData, deleteElements, setNodes } = useReactFlow()
   const [showColors, setShowColors] = useState(false)
+  const linkOutTip = useTooltip('Link out — drag to a terminal to attach this note as context', { placement: 'top' })
+  const linkInTip = useTooltip('Link in — drop a link here to attach this note as context', { placement: 'top' })
   /**
    * The title is a plain SPAN until it is clicked, exactly as on a terminal node.
    *
@@ -79,15 +81,17 @@ export function StickyNode({ id, data, selected }: NodeProps<CanvasNode>) {
         type="source"
         position={Position.Right}
         className="bridge-handle bridge-handle--out"
-        data-tip="Link out — drag to a terminal to attach this note as context"
+        {...linkOutTip.triggerProps}
       />
+      {linkOutTip.bubble}
       <Handle
         id="link-in"
         type="target"
         position={Position.Left}
         className="bridge-handle bridge-handle--in"
-        data-tip="Link in — drop a link here to attach this note as context"
+        {...linkInTip.triggerProps}
       />
+      {linkInTip.bubble}
 
       <div className="sticky-node__header" style={{ background: `${data.color}33` }}>
         <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>
