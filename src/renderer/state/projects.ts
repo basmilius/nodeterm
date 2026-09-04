@@ -378,7 +378,9 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   setProjectColor(id, color) {
     set((s) => ({
-      projects: s.projects.map((p) => (p.id === id ? { ...p, color } : p))
+      // `colorPicked` is what makes this stick: without it the next render would offer the
+      // project its icon's accent again and paint straight over the choice just made.
+      projects: s.projects.map((p) => (p.id === id ? { ...p, color, colorPicked: true } : p))
     }))
   },
 

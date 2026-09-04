@@ -706,6 +706,13 @@ export interface Project {
    *  `sanitizeProjectIcon` (@shared/project-icon) for the hostile-input rules a stored value must
    *  pass on load. */
   icon?: ProjectIcon
+  /**
+   * Whether `color` was CHOSEN by someone, rather than the palette colour every project is handed
+   * at creation. Only a chosen colour outranks the accent a derived icon offers
+   * (`effectiveProjectColor`) — see @shared/icon-color for why an unchosen one should not.
+   * Git-shared alongside `color` itself; absent on every project written before the field.
+   */
+  colorPicked?: boolean
   /** Default working directory for new terminals created in this project. */
   cwd?: string
   /** When set, this is an SSH project: its terminals run on `server` in `remoteCwd` (remote tmux). */
@@ -954,6 +961,17 @@ export interface WorkspaceApi {
   /** Whether <folder>/.nodeterm/project.json is `present`, definitely `absent`, or `unreadable`
    *  (any non-ENOENT error). Never guesses absence from a failed read — see issue #385. */
   projectFileState(folder: string): Promise<'present' | 'absent' | 'unreadable'>
+  /**
+   * The icon/name the project's own folder declares (`.idea/icon.svg`, a favicon, `.idea/.name`, …
+   * — see @shared/project-icon-derive). A FALLBACK: the user's `Project.icon` / renamed
+   * `Project.name` always win, and nothing here is ever written back to project.json.
+   * Cached per project host-side; `refresh` re-reads. Never rejects — the empty identity is what
+   * "no well-known file" and "could not look" both come back as.
+   */
+  deriveIdentity(
+    projectId: string,
+    opts?: { refresh?: boolean }
+  ): Promise<import('./project-icon-derive').DerivedProjectIdentity>
   /** Fired once after an on-disk migration: `v2` = a v2→v3 migration wrote .nodeterm/ dirs into the
    *  project folders; `exec` = the custom shell / advanced ssh args of already-open projects moved
    *  out of the shared project file into this machine's own workspace index (@shared/node-exec). */

@@ -108,6 +108,14 @@ export interface ProjectFileV1 {
   id?: string
   name: string
   color: string
+  /**
+   * Whether `color` is a DELIBERATE choice rather than the palette colour a project is handed at
+   * creation. Shared, not machine-local, because `color` itself is shared: a teammate's pick must
+   * outrank the icon-derived accent in every clone, not only on the machine it was made.
+   * Absent = never chosen, which is what every project written before this field looks like — and
+   * the safe reading, since those colours were assigned, not picked. Strict `=== true` on read.
+   */
+  colorPicked?: boolean
   /** Sanitized on the way in (`fileToProject`) and only ever emitted when valid (`projectToFile`) —
    *  see `sanitizeProjectIcon`. An off/invalid icon adds no bytes to the committed file. */
   icon?: ProjectIcon
@@ -334,6 +342,9 @@ export function projectToFile(
     id,
     name: p.name,
     color: p.color,
+    // Only a real pick is written; an untouched project adds no bytes (and keeps offering the
+    // icon's own accent to everyone who clones it).
+    ...(p.colorPicked === true ? { colorPicked: true } : {}),
     viewport: framingViewport(nodes),
     nodes,
     ...(icon ? { icon } : {}),
@@ -473,6 +484,8 @@ export function fileToProject(
     // a deliberate rename that happens to look path-ish stays exactly as typed.
     name: healPathAsName(f.name, base.cwd),
     color: f.color,
+    // Hostile input, same treatment as the capability flags: a literal `true` and nothing else.
+    ...(f.colorPicked === true ? { colorPicked: true } : {}),
     ...(icon ? { icon } : {}),
     viewport: base.viewport ?? f.viewport ?? framingViewport(f.nodes),
     // applyLocalNodeExec DROPS whatever the file carried in the exec fields (it is not ours) and

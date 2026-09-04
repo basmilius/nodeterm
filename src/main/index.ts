@@ -93,6 +93,7 @@ import { makeProjectSpawnOverrides } from '../core/project-spawn-overrides'
 import { makeLocalSetupRunner } from '../core/project-setup-runner-local'
 import { makeSshSetupRunner } from './remote-ssh/ssh-setup-runner'
 import { registerGitHubIntegration } from '../core/github/integration'
+import { registerProjectIconDeriveIpc } from '../core/project-icon-derive-service'
 import { runGitHubCliCommand } from '../core/github/credentials'
 import {
   ElectronGitHubSecretStore,
@@ -1611,6 +1612,24 @@ app.whenReady().then(async () => {
     () => getMainWindow()?.webContents.id,
     github.controller
   )
+
+  // The well-known icon/name a project's folder declares. `target` reads THIS machine's index by
+  // id — a renderer never supplies a path — and the SSH leg is resolved lazily, like the routers
+  // below it: sshProjectManager is created further down, and a project with no live master answers
+  // "could not look" (nothing cached) rather than "no icon".
+  registerProjectIconDeriveIpc({
+    target: (projectId) => {
+      const info = workspaceStore.projectTargetInfo(projectId)
+      if (!info) return null
+      return info.ssh ? { remoteCwd: info.ssh.remoteCwd } : { cwd: info.cwd }
+    },
+    remoteRun: (projectId) => {
+      const ref = sshProjectManager?.refForProject(projectId)
+      if (!ref) return null
+      return (script) =>
+        sshProjectManager!.sshRun(childArgs(ref.conn, ref.controlPath, script))
+    }
+  })
 
   // SSH-project Explorer/Editor fs: the remote analog of the fs:* handlers above, scoped to a
   // project's ControlMaster. One SshFs bound to the SSH-project manager's own ssh runner (the SAME

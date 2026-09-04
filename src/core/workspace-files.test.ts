@@ -614,3 +614,36 @@ describe('project icon: emitted only when valid, sanitized on the hostile load p
     expect(fileToProject(f, { id: 'p1' }).icon).toBeUndefined()
   })
 })
+
+describe('colorPicked (a chosen colour vs the palette one)', () => {
+  const file = (over: Record<string, unknown> = {}) => ({
+    version: 1 as const,
+    rev: 1,
+    savedAt: 'now',
+    name: 'p',
+    color: '#ff9f0a',
+    nodes: [],
+    ...over
+  })
+
+  it('round-trips a real pick, and writes nothing for a project nobody has touched', () => {
+    expect(fileToProject(file({ colorPicked: true }), { id: 'x' }).colorPicked).toBe(true)
+    expect(fileToProject(file(), { id: 'x' }).colorPicked).toBeUndefined()
+
+    const picked = projectToFile(
+      fileToProject(file({ colorPicked: true }), { id: 'x' }),
+      1,
+      'now',
+      'x'
+    )
+    expect(picked.colorPicked).toBe(true)
+    const untouched = projectToFile(fileToProject(file(), { id: 'x' }), 1, 'now', 'x')
+    expect('colorPicked' in untouched).toBe(false)
+  })
+
+  it('is hostile input: only a literal true counts as a choice', () => {
+    for (const forged of ['true', 1, {}, [], 'yes']) {
+      expect(fileToProject(file({ colorPicked: forged }), { id: 'x' }).colorPicked).toBeUndefined()
+    }
+  })
+})

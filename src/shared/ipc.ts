@@ -360,6 +360,10 @@ export const IPC = {
    *  refuses an SSH project (local-only this PR); an unknown/invalid input answers `[]`. Resolves
    *  `SharedPathResult[]`. See core/worktree-shared-paths-handlers.ts. */
   worktreeMaterializeShared: 'worktree:materialize-shared',
+  /** The well-known icon/name a project's own folder declares (@shared/project-icon-derive). Args
+   *  `(projectId, { refresh? })`; the handler reads the folder itself by id — a renderer never
+   *  supplies a path. Resolves `DerivedProjectIdentity`, never throws, never persists anything. */
+  workspaceDeriveIdentity: 'workspace:derive-identity',
   // main → renderer events
   workspaceMigrated: 'workspace:migrated',
   /** Payload: the `workspace.json.corrupt-<ts>` filename the unreadable index was preserved as. */

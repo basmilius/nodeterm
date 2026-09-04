@@ -5,6 +5,11 @@ import { visibleSettingsGroups, type SettingsGroup, type SettingsSectionId } fro
 import { matchesQuery } from './search'
 import { SectionIcon } from './SettingsIcons'
 import { ProjectGlyph } from '../ProjectGlyph'
+import { parseProjectSectionId } from './project-settings-targets'
+import {
+  derivedGlyphFor,
+  useProjectDerivedIdentities
+} from '@renderer/state/derivedProjectIdentity'
 
 const isMac = /Mac/i.test(navigator.platform || navigator.userAgent)
 
@@ -31,6 +36,19 @@ export function SettingsSidebar({
     () => [...visibleSettingsGroups(isMac), ...(extraGroups ?? [])],
     [extraGroups]
   )
+  // Project rows fall back to what their folder declares, like every other glyph site. The ids
+  // come out of the section ids: the sidebar takes no store subscription of its own (see
+  // `extraGroups`), and this keeps that shape.
+  const projectIds = useMemo(
+    () =>
+      GROUPS.flatMap((group) =>
+        group.sections
+          .map((section) => parseProjectSectionId(section.id))
+          .filter((id): id is string => id !== null)
+      ),
+    [GROUPS]
+  )
+  const derivedIdentities = useProjectDerivedIdentities(projectIds)
   return (
     <aside className="flex w-[256px] shrink-0 flex-col border-r border-border bg-panel">
       <div
@@ -85,6 +103,7 @@ export function SettingsSidebar({
             </p>
             {group.sections.map((s) => {
               const isActive = activeSectionId === s.id
+              const sectionProjectId = parseProjectSectionId(s.id)
               const dimmed = hasQuery && !matchesQuery(query, { title: s.title })
               return (
                 <button
@@ -112,6 +131,10 @@ export function SettingsSidebar({
                       // project section used to share.
                       <ProjectGlyph
                         icon={s.icon}
+                        derived={derivedGlyphFor(
+                          !!s.icon,
+                          sectionProjectId ? derivedIdentities[sectionProjectId] : undefined
+                        )}
                         color={s.color}
                         name={s.title}
                         variant="monogram"

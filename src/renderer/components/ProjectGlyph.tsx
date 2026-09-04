@@ -1,4 +1,5 @@
 import type { ProjectIcon } from '@shared/project-icon'
+import type { RenderableDerivedIcon } from '@renderer/lib/projectIdentity'
 import {
   Folder,
   FolderGit,
@@ -94,8 +95,14 @@ const LUCIDE_ICONS: Record<string, LucideIcon> = {
 }
 
 export interface ProjectGlyphProps {
-  /** The project's icon, when it has one. Absent → render the site's pre-icon fallback. */
+  /** The project's icon, when it has one. Absent → `derived`, else the site's pre-icon fallback. */
   icon?: ProjectIcon
+  /**
+   * What the project's own FOLDER declares (`.idea/icon.svg`, a favicon, …), already sanitized by
+   * `renderableDerivedIcon`. Used ONLY when `icon` is absent: a user's pick always wins, and a
+   * derived icon is a fallback, never an override. Sites that pass neither are unchanged.
+   */
+  derived?: RenderableDerivedIcon | null
   /** The project's own color — tints the lucide placeholder and drives both fallbacks. Optional
    *  so a caller can suppress the fallback tint entirely (TabBar's inactive-tab dot only colors
    *  the active tab; passing `undefined` there reproduces that exactly). */
@@ -118,6 +125,12 @@ export interface ProjectGlyphProps {
 const DEFAULT_SIZE = 16
 
 /**
+ * Every branch that paints ARTWORK carries `data-project-glyph="icon"`. Each render site styles
+ * its box for the MONOGRAM fallback — a rounded, colour-filled tile with an initial in it — and
+ * that framing is wrong around an icon, which is already its own shape (see the rule in
+ * styles.css). One marker beats a modifier class per site, and it cannot be forgotten at a new
+ * site the way a class can.
+ *
  * A project's small badge, used wherever the UI shows one beside a project's name: its custom
  * icon when it has one (emoji, a curated lucide glyph, or an image — GitHub avatar/upload/
  * favicon), else the fallback that render site already showed before project icons existed — a
@@ -127,6 +140,7 @@ const DEFAULT_SIZE = 16
  */
 export function ProjectGlyph({
   icon,
+  derived,
   color,
   name,
   size = DEFAULT_SIZE,
@@ -139,6 +153,7 @@ export function ProjectGlyph({
       <span
         className={className}
         title={title}
+        data-project-glyph="icon"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -159,6 +174,7 @@ export function ProjectGlyph({
         <span
           className={className}
           title={title}
+          data-project-glyph="icon"
           style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <Icon color={color || 'currentColor'} width="100%" height="100%" aria-hidden="true" />
@@ -170,8 +186,28 @@ export function ProjectGlyph({
 
   if (icon?.type === 'image') {
     return (
-      <span className={className} title={title} style={{ display: 'inline-flex', overflow: 'hidden' }}>
+      <span
+        className={className}
+        title={title}
+        data-project-glyph="icon"
+        style={{ display: 'inline-flex', overflow: 'hidden' }}
+      >
         <img src={icon.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </span>
+    )
+  }
+
+  // Only reached when the project has no icon of its own. `contain`, not `cover`: a favicon or an
+  // .idea/icon.svg is a whole mark rather than a photo, so it is fitted, never cropped.
+  if (derived) {
+    return (
+      <span
+        className={className}
+        title={title}
+        data-project-glyph="icon"
+        style={{ display: 'inline-flex', overflow: 'hidden' }}
+      >
+        <img src={derived.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
       </span>
     )
   }

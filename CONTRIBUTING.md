@@ -327,6 +327,20 @@ disable it with its reason (`NEW_FILE_NO_CWD_HINT`,
 nothing, and a message that names the wrong cause ("not a git repository" for a project that has no
 folder to be one) sends the user hunting a problem that does not exist.
 
+**A value read out of a project folder is hostile input, and never becomes a stored one.** A
+project's icon/name can be DERIVED from the folder (`.idea/icon.svg`, a favicon, `.idea/.name` —
+@shared/project-icon-derive), and that folder may have arrived by `git clone`. Three rules the
+feature is built on: the user's own pick always wins and a derived value is never written back to
+`.nodeterm/project.json` (it is re-read, so persisting it would push one machine's reading into
+every clone); a file's type comes from its MAGIC BYTES, never its extension, and every path — fixed
+candidate or one scanned out of a `<link rel="icon">` — is jailed inside the project (the local
+reader re-checks after `realpath`, so a symlink cannot lead the read out); and "we could not look"
+(dead master, unmounted folder) answers null and is NOT cached, because caching it would mean the
+icon never appears once the project connects. A derived SVG is sanitized in the renderer
+(DOMPurify svg profile) and painted inside an `<img>` — and if you touch that sanitizer, know that
+DOMPurify's `ALLOWED_URI_REGEXP` filters EVERY non-URI-safe attribute value, so narrowing it to
+"fragments and data: images" quietly strips `width` / `viewBox` / `fill="url(#g)"`.
+
 **Agent features attach to base harness capabilities, not frontend allowlists.** A custom agent can
 inherit a builtin harness, so add the capability and its one shared leaf (`src/shared/agents`) and
 let every UI ask the helper. Repeating Claude/Codex/etc. cases in menus breaks that inheritance and

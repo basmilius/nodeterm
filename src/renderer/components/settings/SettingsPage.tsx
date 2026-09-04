@@ -5,6 +5,8 @@ import { useProjects } from '../../state/projects'
 import { SettingsSearchContext } from './context'
 import { SettingsSidebar } from './SettingsSidebar'
 import { projectsSettingsGroup, type SettingsSectionId } from './nav'
+import { useProjectDerivedIdentities } from '@renderer/state/derivedProjectIdentity'
+import { effectiveProjectColor, effectiveProjectName } from '@renderer/lib/projectIdentity'
 import { projectSectionId } from './project-settings-targets'
 import { useSettingsTarget } from './useSettingsTarget'
 import { ProjectSettingsSection } from './sections/ProjectSettingsSection'
@@ -67,12 +69,22 @@ export function SettingsPage({
     openProjectIds
   )
 
+  // A project still wearing its folder basename is listed under the name its folder declares
+  // (`.idea/.name`), the same rule the tab strip follows — the two must not disagree about what a
+  // project is called.
+  const derivedIdentities = useProjectDerivedIdentities(openProjectIds)
+
   const extraGroups = useMemo(() => {
     const group = projectsSettingsGroup(
-      openProjects.map((p) => ({ id: p.id, name: p.name, color: p.color, icon: p.icon }))
+      openProjects.map((p) => ({
+        id: p.id,
+        name: effectiveProjectName(p, derivedIdentities[p.id]?.name),
+        color: effectiveProjectColor(p, derivedIdentities[p.id]?.color),
+        icon: p.icon
+      }))
     )
     return group ? [group] : []
-  }, [openProjects])
+  }, [openProjects, derivedIdentities])
 
   useEffect(() => {
     void hydrate()

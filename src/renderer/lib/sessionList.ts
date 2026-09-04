@@ -29,6 +29,9 @@ export interface ProjectInput {
   id: string
   name: string
   color: string
+  /** See `Project.colorPicked` — carried onto rows so they can tell a chosen colour from the
+   *  palette one, which decides whether a derived icon's accent may stand in for it. */
+  colorPicked?: boolean
   /** Optional custom project icon — carried onto flattened/grouped rows (see `SessionRowVM` and
    *  `SessionGroup`) so the sidebar can show it instead of the plain color monogram. */
   icon?: ProjectIcon
@@ -253,6 +256,9 @@ export interface SessionRowVM {
   projectId?: string
   projectName?: string
   projectColor?: string
+  /** See `Project.colorPicked` — whether `projectColor` is a choice (and so outranks the accent a
+   *  derived icon offers) or the palette colour the project was handed at creation. */
+  projectColorPicked?: boolean
   projectIcon?: ProjectIcon
 }
 
@@ -294,7 +300,7 @@ export interface SessionGroup {
 function toRow(
   n: SessionNodeInput,
   status: AgentNodeStatus | undefined,
-  project?: Pick<ProjectInput, 'id' | 'name' | 'color' | 'icon'>
+  project?: Pick<ProjectInput, 'id' | 'name' | 'color' | 'colorPicked' | 'icon'>
 ): SessionRowVM {
   // Workflow state and read state are deliberately independent. `done` means the agent finished a
   // turn and is waiting for a new user prompt; `unread` only controls notification/read affordances.
@@ -327,6 +333,7 @@ function toRow(
     projectId: project?.id,
     projectName: project?.name,
     projectColor: project?.color,
+    ...(project?.colorPicked === true ? { projectColorPicked: true } : {}),
     projectIcon: project?.icon
   }
 }

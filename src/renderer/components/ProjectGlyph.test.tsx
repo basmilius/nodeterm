@@ -97,4 +97,57 @@ describe('ProjectGlyph', () => {
     const span = host.querySelector('span.my-class')
     expect(span?.getAttribute('title')).toBe('Titled')
   })
+
+  // ---- Derived (folder-declared) icon: the fallback, never an override --------------------------
+  const DERIVED = { src: 'data:image/svg+xml;base64,PHN2Zy8+', from: '.idea/icon.svg' }
+
+  it('paints the folder\u2019s icon when the project has none of its own', async () => {
+    await render(<ProjectGlyph derived={DERIVED} color="#f00" name="nodeterm" className="tab__dot" />)
+    const img = host.querySelector('img')
+    expect(img?.getAttribute('src')).toBe(DERIVED.src)
+    // Fitted, not cropped: a favicon is a whole mark rather than a photo.
+    expect((img as HTMLElement).style.objectFit).toBe('contain')
+  })
+
+  it('lets the project\u2019s own icon win over the folder\u2019s, whatever kind it is', async () => {
+    await render(
+      <ProjectGlyph
+        icon={{ type: 'image', src: 'data:image/png;base64,AA==', source: 'upload' }}
+        derived={DERIVED}
+        name="nodeterm"
+      />
+    )
+    expect(host.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,AA==')
+
+    await render(<ProjectGlyph icon={{ type: 'emoji', emoji: '\ud83d\ude80' }} derived={DERIVED} name="x" />)
+    expect(host.querySelector('img')).toBeNull()
+
+    await render(<ProjectGlyph icon={{ type: 'lucide', name: 'rocket' }} derived={DERIVED} name="x" />)
+    expect(host.querySelector('img')).toBeNull()
+    expect(host.querySelector('svg')).not.toBeNull()
+  })
+
+  it('marks artwork so a site\u2019s monogram tile styling does not frame it', async () => {
+    const marked = async (el: React.ReactElement): Promise<boolean> => {
+      await render(el)
+      return !!host.querySelector('span[data-project-glyph="icon"]')
+    }
+    expect(await marked(<ProjectGlyph derived={DERIVED} name="x" />)).toBe(true)
+    expect(await marked(<ProjectGlyph icon={{ type: 'emoji', emoji: '\ud83d\ude80' }} name="x" />)).toBe(true)
+    expect(await marked(<ProjectGlyph icon={{ type: 'lucide', name: 'folder' }} name="x" />)).toBe(true)
+    expect(
+      await marked(
+        <ProjectGlyph icon={{ type: 'image', src: 'data:image/png;base64,AA==', source: 'upload' }} name="x" />
+      )
+    ).toBe(true)
+    // The fallbacks ARE the tile the sites style, so they must not carry the marker.
+    expect(await marked(<ProjectGlyph color="#abc123" name="Dotty" variant="dot" />)).toBe(false)
+    expect(await marked(<ProjectGlyph color="#abc123" name="Dotty" />)).toBe(false)
+  })
+
+  it('renders the pre-feature fallback when neither is given', async () => {
+    await render(<ProjectGlyph derived={null} color="#abc123" name="Dotty" variant="dot" className="tab__dot" />)
+    expect(host.querySelector('img')).toBeNull()
+    expect(host.querySelector('span.tab__dot')).not.toBeNull()
+  })
 })

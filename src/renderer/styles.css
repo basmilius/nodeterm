@@ -332,8 +332,10 @@ body,
 .tab.active {
   /* THE tab look: the active tab is a hole in the bar showing the canvas behind it. */
   background: var(--canvas-bg);
-  /* Neutral, never the project colour: the fill alone says which tab is active and `.tab__dot`
-     says which project it is, so tinting the label would say the same thing twice. */
+  /* Neutral, never the project colour: a project accent is picked to stand out on a canvas, not
+     to be read as 13px type on a near-black strip (a dark blue or a deep red tab name was barely
+     legible). The fill alone says which tab is active; the glyph, or the fallback `.tab__dot`,
+     says which project it is. */
   color: var(--text);
   /* Above `.tabbar::after`, so the tab's own bottom pixel replaces the separator line and the
      fill runs uninterrupted into the canvas. */
@@ -405,13 +407,23 @@ body,
 /* When the project has a real icon (emoji / lucide / image) the glyph replaces the plain 9px
    fallback dot: a larger box (an emoji is ~13px and would overflow 9px, and a lucide/image glyph
    would be clipped) with NO baked-in tint background (that tint circle only belongs to the fallback
-   dot). Applied by TabBar only when `p.icon` is set; the plain `.tab__dot` fallback is untouched.
+   dot). Applied whenever the tab paints a glyph — the project's own icon OR the one its folder
+   declares; the plain `.tab__dot` fallback is untouched.
    16px matches the other project-glyph surfaces; the exact px wants a live Mac look, so it's tunable. */
 .tab__dot--icon {
   width: 16px;
   height: 16px;
   border-radius: 0;
   background: none;
+}
+
+/* An icon is its own artwork, so the box a render site styles for the MONOGRAM fallback — a
+   rounded, colour-filled tile with an initial in it (.ss-group__monogram, .ss-mark--project,
+   .welcome__recent-mark, the settings sidebar's rounded-[3px]) — must not frame it: a logo with
+   5px rounded corners cut off its own edges. Element + attribute (0,1,1) so it beats those
+   single-class rules and Tailwind's, wherever they sit in source order. */
+span[data-project-glyph='icon'] {
+  border-radius: 0;
 }
 
 /* Unread-completion count badge on a project tab. */

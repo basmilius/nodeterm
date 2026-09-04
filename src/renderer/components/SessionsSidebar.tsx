@@ -21,6 +21,8 @@ import { sidebarEmptyState, sidebarFilterKeyAction } from '../lib/sidebarFilter'
 import { SessionRow } from './SessionRow'
 import { ProjectGlyph } from './ProjectGlyph'
 import { ClosedHistorySection } from './ClosedHistorySection'
+import { derivedGlyphFor, useProjectDerivedIdentities } from '../state/derivedProjectIdentity'
+import { effectiveProjectColor, effectiveProjectName } from '../lib/projectIdentity'
 import { IconBellFilled, IconCircleCheck, IconClose, IconPin } from './icons'
 import { useProjects } from '../state/projects'
 import { useSettings } from '../state/settings'
@@ -152,6 +154,15 @@ export function SessionsSidebar(props: SessionsSidebarProps): JSX.Element | null
       open ? buildSessionList(projects, liveActiveNodes, activeProjectId, statusById, filter) : [],
     [open, projects, liveActiveNodes, activeProjectId, statusById, filter]
   )
+  // What each project's folder declares — the fallback under a project's own icon/name. Asked
+  // for every project the sidebar can show, not just the expanded ones: the glyph is in the
+  // collapsed header too.
+  const derivedIds = useMemo(() => projects.map((p) => p.id), [projects])
+  const derivedIdentities = useProjectDerivedIdentities(derivedIds)
+  // The group VM carries only a local `cwd`, and `effectiveProjectName` must see an SSH project's
+  // remoteCwd too — so the name rule reads the project itself, exactly like the tab strip's.
+  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
+
   // Status-grouped sections (only computed in status mode — flattens all projects' sessions by
   // live agent status so attention floats to the top). Same inputs as `groups`.
   const statusSections = useMemo(
@@ -601,6 +612,11 @@ export function SessionsSidebar(props: SessionsSidebarProps): JSX.Element | null
           ))
         ) : (
           groups.map((g) => {
+          const derivedEntry = derivedIdentities[g.projectId]
+          const groupProject = projectById.get(g.projectId)
+          const projectName = groupProject
+            ? effectiveProjectName(groupProject, derivedEntry?.name)
+            : g.projectName
           const collapseKey = projectCollapseKey(g.projectId)
           // While filtering, never collapse — a collapsed project would hide its own matches.
           const isCollapsed = filter
@@ -645,7 +661,7 @@ export function SessionsSidebar(props: SessionsSidebarProps): JSX.Element | null
                   type="button"
                   className="ss-group__chev"
                   title={isCollapsed ? 'Expand' : 'Collapse'}
-                  aria-label={isCollapsed ? `Expand ${g.projectName}` : `Collapse ${g.projectName}`}
+                  aria-label={isCollapsed ? `Expand ${projectName}` : `Collapse ${projectName}`}
                   aria-expanded={!isCollapsed}
                   draggable={false}
                   onClick={(e) => {
@@ -657,12 +673,17 @@ export function SessionsSidebar(props: SessionsSidebarProps): JSX.Element | null
                 </button>
                 <ProjectGlyph
                   icon={g.projectIcon}
-                  color={g.projectColor}
-                  name={g.projectName}
+                  derived={derivedGlyphFor(!!g.projectIcon, derivedEntry)}
+                  color={
+                    groupProject
+                      ? effectiveProjectColor(groupProject, derivedEntry?.color)
+                      : g.projectColor
+                  }
+                  name={projectName}
                   variant="monogram"
                   className="ss-group__monogram"
                 />
-                <span className="ss-group__name">{g.projectName}</span>
+                <span className="ss-group__name">{projectName}</span>
                 {branches[g.projectId] && (
                   <span className="ss-group__branch">⎇ {branches[g.projectId]}</span>
                 )}
