@@ -1345,6 +1345,14 @@ export interface Settings {
    *  whatever size they were saved with; other node kinds keep their own defaults. */
   defaultNodeWidth: number
   defaultNodeHeight: number
+  /** Width a new WEB node opens at. Its height is not a setting: a `<webview>` lays the page out to
+   *  the width it is given, so the width is the only free choice and the height follows from the
+   *  page. See `webNodeMaxHeight`. */
+  webNodeWidth: number
+  /** Ceiling for the height a web node grows to after it has measured its page. A live site is
+   *  routinely tens of thousands of pixels tall; this is what keeps one node from becoming the
+   *  whole canvas. */
+  webNodeMaxHeight: number
   /** Sessions sidebar: the DEFAULT for a project row the user never toggled — on (historical)
    *  keeps the active project expanded and collapses the others, off leaves everything expanded.
    *  Explicit toggles live in `sidebarCollapsedItems` and always win. */
@@ -1684,6 +1692,8 @@ export const DEFAULT_SETTINGS: Settings = {
   autoAlignGrid: false,
   defaultNodeWidth: 640,
   defaultNodeHeight: 440,
+  webNodeWidth: 1280,
+  webNodeMaxHeight: 3000,
   sidebarAutoCollapse: true,
   sidebarCollapsedItems: {},
   sidebarGrouping: 'project',

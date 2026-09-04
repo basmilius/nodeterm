@@ -86,6 +86,14 @@ export interface NodeData {
   /** One-shot command run once when the terminal first opens (not persisted). */
   initialCommand?: string
   /**
+   * Web nodes only: this node was just created and still owes itself a grow-to-fit. WebNode
+   * measures the page on its first load, resizes to it, and clears this. NOT persisted (absent
+   * from flowToNodeStates, like initialCommand) on purpose: the flag must mean "opened moments
+   * ago and not yet looked at", so a node the user has since resized is never re-fitted on a
+   * later app run.
+   */
+  fitToContent?: boolean
+  /**
    * Terminal nodes armed with canvas-control's `--after`: the launch is held until every node
    * in `after` reports idle. Unlike `initialCommand` this IS persisted — the wait is durable
    * state, not a one-shot open event. Cleared the moment it fires.
@@ -962,7 +970,28 @@ export function createVideoNode(
   }
 }
 
-/** Creates a web (webview) node showing a live URL or a local html file. */
+/** The width a new web node opens at, and the ceiling its measured height is held under. Read at
+ *  creation like `terminalNodeSize`, and re-clamped here because settings.json is hand-editable. */
+export function webNodeBounds(): { width: number; maxHeight: number } {
+  const s = useSettings.getState().settings
+  const clamp = (v: unknown, lo: number, hi: number, dflt: number): number => {
+    const n = typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : dflt
+    return Math.min(hi, Math.max(lo, n))
+  }
+  return {
+    width: clamp(s.webNodeWidth, 320, 2400, 1280),
+    maxHeight: clamp(s.webNodeMaxHeight, 240, 6000, 3000)
+  }
+}
+
+/**
+ * Creates a web (webview) node showing a live URL or a local html file.
+ *
+ * It opens at the configured width and an ordinary height, then WebNode measures the page and
+ * grows it to fit (`data.fitToContent`). That flag is deliberately NOT serialized: it must live
+ * from creation until the first load and no longer, so a node the user has since resized is never
+ * re-fitted behind their back on a later app run.
+ */
 export function createWebNode(
   index: number,
   src: { url?: string; filePath?: string },
@@ -971,14 +1000,16 @@ export function createWebNode(
   const title = src.url
     ? src.url.replace(/^https?:\/\//, '').slice(0, 40)
     : src.filePath?.split('/').pop() || 'web'
+  const { width } = webNodeBounds()
   return {
     id: nextId('web'),
     type: 'web',
-    ...placeNode('web', center, index, WEB_SIZE.width, WEB_SIZE.height),
+    ...placeNode('web', center, index, width, WEB_SIZE.height),
     data: {
       title,
       color: '#6ac4dc',
       group: null,
+      fitToContent: true,
       ...(src.url ? { url: src.url } : {}),
       ...(src.filePath ? { filePath: src.filePath } : {})
     }
