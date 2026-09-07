@@ -99,3 +99,41 @@ export function restoreSummary(
   if (counts.extra) parts.push(`${counts.extra} not in this layout`)
   return `Restored "${name}": ${parts.length ? parts.join(', ') : 'nothing changed'}.`
 }
+
+/**
+ * Does this project's `.nodeterm/project.json` live somewhere other people read?
+ *
+ * A layout is CONTENT, so it sits in that file wherever the file is: in the repo for a folder
+ * project, on the host for an SSH one. Both are shared with whoever else opens the project. Only a
+ * cwd-less canvas keeps its file inside this machine's userData and is genuinely nobody else's.
+ *
+ * One definition because two dialogs ask it (delete and update) and a wrong answer is a sentence
+ * that lies about who a destructive edit reaches.
+ */
+export function layoutIsShared(project: { cwd?: string; ssh?: unknown } | undefined): boolean {
+  return !!(project?.cwd || project?.ssh)
+}
+
+/** The shared half of the two destructive-edit dialogs: who else this reaches. */
+const sharedClause = (shared: boolean): string =>
+  shared ? ' It is shared with the project, so it changes for everyone who opens it.' : ''
+
+/**
+ * Deleting a layout. Confirmed because layout edits are NOT in the undo stack: ⌘Z replays node
+ * arrays, and a layout lives beside them rather than in them.
+ */
+export function deleteLayoutMessage(name: string, shared: boolean): string {
+  return `Delete the layout "${name}"?${sharedClause(shared)} This cannot be undone.`
+}
+
+/**
+ * Overwriting a layout with the arrangement now on screen.
+ *
+ * Confirmed for the same reason delete is, and it is the reason this is not a bare one-click
+ * action: the previous rects are gone the moment it runs, and there is no undo to reach for. The
+ * message names what is replaced rather than what is kept, because the saved arrangement is the
+ * thing the user is about to lose.
+ */
+export function updateLayoutMessage(name: string, shared: boolean): string {
+  return `Update "${name}" to the arrangement on screen? Its saved positions are replaced.${sharedClause(shared)} This cannot be undone.`
+}

@@ -2933,6 +2933,20 @@ the Settings section and ShortcutsPanel start disagreeing about what a chord mea
     worst a bad layout can do is move things, which ⌘Z takes back (the debounced history effect
     picks up the `setNodes` like any other placement, which is why restore has no confirm and
     delete does).
+  - **The two DESTRUCTIVE row actions confirm; restore does not, and the split is the undo stack.**
+    ⌘Z replays node arrays, and a layout lives beside them rather than in them, so delete and
+    "update to the arrangement on screen" are both unrecoverable the moment they run while a restore
+    is one undo away. Update exists because the three-step alternative already worked (save, retype
+    the name you are looking at, confirm the replace) and re-typing a name is friction, not a
+    decision; it reuses `saveLayout`'s replace-by-id path, so `createdAt` survives, `updatedAt`
+    moves, and the window size and camera are re-captured because you are updating FROM this screen.
+    Both dialogs are built from `layoutIsShared` + `deleteLayoutMessage`/`updateLayoutMessage`
+    (`canvasLayoutView.ts`), ONE definition of who else a destructive edit reaches: a folder project
+    and an SSH project both keep their `project.json` where other people read it, and only a
+    cwd-less canvas does not. Gating that on `cwd` alone (the first version) told an SSH project's
+    user their edit was private when it was not. The layout is re-resolved AT CONFIRM TIME, never
+    captured with the dialog: it is open for as long as the user looks at it, and a pull or a peer
+    mutation can retire it underneath.
   - **The content half is git-shared, the camera half is machine-local.** `Project.layouts` rides
     `.nodeterm/project.json` beside `nodes` and `kanban`, because node geometry is already shared
     content in that file and a restore writes exactly those fields. `Project.layoutViewports` (this

@@ -464,10 +464,13 @@ import { uuid } from '../lib/uuid'
 import { CANVAS_LAYOUTS_CAP, findLayoutByName, type CanvasLayout } from '@shared/canvas-layout'
 import { applyLayout, captureLayout } from '../lib/canvasLayout'
 import {
+  deleteLayoutMessage,
   layoutFramingViewport,
+  layoutIsShared,
   restoreSummary,
   saveLayoutRefusal,
-  sortedLayouts
+  sortedLayouts,
+  updateLayoutMessage
 } from '../lib/canvasLayoutView'
 import { planReopen, type ReopenPlan } from '../lib/reopenPlan'
 import { oneLine } from '@shared/one-line'
@@ -6784,6 +6787,54 @@ export function Canvas() {
   }, [alertLayout, setConfirm, getViewport])
 
   /**
+   * Overwrite a saved layout with the arrangement now on screen, keeping its name and id.
+   *
+   * The three-step alternative already worked (save, retype the name, confirm the replace), which
+   * is exactly why this exists: re-typing a name you are looking at is not a decision, it is
+   * friction. It reuses `saveLayout`'s replace-by-id path, so `createdAt` survives and `updatedAt`
+   * moves, and it re-captures the window size and camera because you are updating FROM this screen.
+   *
+   * Confirmed, unlike restore: layout edits are not in the undo stack, so the previous rects are
+   * gone the moment this runs.
+   */
+  const updateCanvasLayout = useCallback(
+    (layout: CanvasLayout) => {
+      const projectId = useProjects.getState().activeProjectId
+      if (!projectId) return
+      const shared = layoutIsShared(useProjects.getState().getProject(projectId))
+      setConfirm({
+        message: updateLayoutMessage(layout.name, shared),
+        confirmLabel: 'Update',
+        onConfirm: () => {
+          setConfirm(null)
+          // Re-resolved at confirm time, not captured above: the dialog is open for as long as the
+          // user looks at it, and a pull or a peer mutation can retire the layout underneath it.
+          const live = useProjects.getState().getProject(projectId)?.layouts?.find((l) => l.id === layout.id)
+          if (!live) {
+            alertLayout(`"${layout.name}" is no longer saved on this project, so nothing was updated.`)
+            return
+          }
+          const next = captureLayout(nodesRef.current, {
+            id: live.id,
+            name: live.name,
+            now: Date.now(),
+            window: { width: window.innerWidth, height: window.innerHeight }
+          })
+          const refusal = saveLayoutRefusal(
+            useProjects.getState().saveLayout(projectId, next, getViewport(), Date.now())
+          )
+          if (refusal) {
+            alertLayout(refusal)
+            return
+          }
+          setNotice({ kind: 'info', text: `Updated "${live.name}".` })
+        }
+      })
+    },
+    [alertLayout, setConfirm, getViewport, setNotice]
+  )
+
+  /**
    * Put the canvas back the way a layout recorded it.
    *
    * No confirm, deliberately: this moves nodes and does nothing else - no session is touched, no
@@ -6863,16 +6914,9 @@ export function Canvas() {
     (layout: CanvasLayout) => {
       const projectId = useProjects.getState().activeProjectId
       if (!projectId) return
-      // A layout is CONTENT, so it lives in the project's own .nodeterm/project.json wherever that
-      // file is: in the repo for a folder project, on the host for an SSH one. Both are shared with
-      // whoever else opens that project, so both get the sentence. Only a cwd-less canvas keeps its
-      // file inside this machine's userData and is genuinely nobody else's.
-      const project = useProjects.getState().getProject(projectId)
-      const shared = !!(project?.cwd || project?.ssh)
+      const shared = layoutIsShared(useProjects.getState().getProject(projectId))
       setConfirm({
-        message: shared
-          ? `Delete the layout "${layout.name}"? It is shared with the project, so it goes for everyone who opens it. This cannot be undone.`
-          : `Delete the layout "${layout.name}"? This cannot be undone.`,
+        message: deleteLayoutMessage(layout.name, shared),
         confirmLabel: 'Delete',
         danger: true,
         onConfirm: () => {
@@ -14430,6 +14474,7 @@ export function Canvas() {
         onFitView={fitAll}
         onSaveLayout={() => void saveCanvasLayout()}
         onRestoreLayout={restoreCanvasLayout}
+        onUpdateLayout={updateCanvasLayout}
         onRenameLayout={(layout) => void renameCanvasLayout(layout)}
         onDeleteLayout={deleteCanvasLayout}
         onZoomIn={() => zoomIn({ duration: ZOOM_STEP_DURATION_MS })}

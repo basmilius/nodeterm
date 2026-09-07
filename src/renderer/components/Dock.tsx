@@ -51,6 +51,8 @@ interface DockProps {
   /** Puts the canvas back the way `layout` recorded it. No confirm: it moves nodes and nothing
    *  else, and the undo stack picks it up like any other placement. */
   onRestoreLayout: (layout: CanvasLayout) => void
+  /** Overwrites `layout` with the arrangement now on screen, keeping its name. */
+  onUpdateLayout: (layout: CanvasLayout) => void
   onRenameLayout: (layout: CanvasLayout) => void
   onDeleteLayout: (layout: CanvasLayout) => void
   onZoomIn: () => void
@@ -94,6 +96,7 @@ export function Dock({
   onFitView,
   onSaveLayout,
   onRestoreLayout,
+  onUpdateLayout,
   onRenameLayout,
   onDeleteLayout,
   onZoomIn,
@@ -421,10 +424,22 @@ export function Dock({
                     <span className="dock-menu__row-actions">
                       <button
                         className="dock-menu__row-act"
+                        aria-label={`Update layout ${layout.name} to the current arrangement`}
+                        title="Update to the current arrangement"
+                        onClick={(e) => {
+                          // The row itself restores; these three must not.
+                          e.stopPropagation()
+                          setLayoutMenuOpen(false)
+                          onUpdateLayout(layout)
+                        }}
+                      >
+                        <UpdateIcon />
+                      </button>
+                      <button
+                        className="dock-menu__row-act"
                         aria-label={`Rename layout ${layout.name}`}
                         title="Rename"
                         onClick={(e) => {
-                          // The row itself restores; these two must not.
                           e.stopPropagation()
                           setLayoutMenuOpen(false)
                           onRenameLayout(layout)
@@ -632,6 +647,13 @@ function LayoutsIcon() {
     <svg {...S}>
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <path d="M10 4v16M10 12h11" />
+    </svg>
+  )
+}
+function UpdateIcon() {
+  return (
+    <svg {...S} width={13} height={13}>
+      <path d="M20 11a8 8 0 1 0-2.3 6.3M20 6v5h-5" />
     </svg>
   )
 }

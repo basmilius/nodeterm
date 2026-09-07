@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { CanvasLayout } from '@shared/canvas-layout'
 import {
+  deleteLayoutMessage,
   layoutFramingViewport,
+  layoutIsShared,
   layoutSubtitle,
   restoreSummary,
   saveLayoutRefusal,
-  sortedLayouts
+  sortedLayouts,
+  updateLayoutMessage
 } from './canvasLayoutView'
 
 const layout = (over: Partial<CanvasLayout> = {}): CanvasLayout => ({
@@ -101,5 +104,43 @@ describe('restoreSummary', () => {
     expect(restoreSummary('Laptop', { moved: 0, missing: 0, extra: 0 })).toBe(
       'Restored "Laptop": nothing changed.'
     )
+  })
+})
+
+describe('layoutIsShared', () => {
+  it('is true for a folder project: its project.json is in the repo', () => {
+    expect(layoutIsShared({ cwd: '/Users/x/repo' })).toBe(true)
+  })
+
+  it('is true for an SSH project: its project.json is on the host', () => {
+    expect(layoutIsShared({ ssh: { server: {}, remoteCwd: '~' } })).toBe(true)
+  })
+
+  // The case the first version got wrong by gating on `cwd` alone.
+  it('is false only for a cwd-less canvas, whose file lives in this machine userData', () => {
+    expect(layoutIsShared({})).toBe(false)
+    expect(layoutIsShared(undefined)).toBe(false)
+  })
+})
+
+describe('deleteLayoutMessage / updateLayoutMessage', () => {
+  it('names who else a shared edit reaches', () => {
+    expect(deleteLayoutMessage('Ultrawide', true)).toContain('shared with the project')
+    expect(updateLayoutMessage('Ultrawide', true)).toContain('shared with the project')
+  })
+
+  it('claims nothing about other people for a cwd-less canvas', () => {
+    expect(deleteLayoutMessage('Scratch', false)).not.toContain('shared')
+    expect(updateLayoutMessage('Scratch', false)).not.toContain('shared')
+  })
+
+  // Both are destructive and neither is in the undo stack, which is why they confirm at all.
+  it('says the edit cannot be undone, in both dialogs', () => {
+    expect(deleteLayoutMessage('A', false)).toContain('cannot be undone')
+    expect(updateLayoutMessage('A', false)).toContain('cannot be undone')
+  })
+
+  it('names what update replaces, since that is what the user is about to lose', () => {
+    expect(updateLayoutMessage('Ultrawide', false)).toContain('saved positions are replaced')
   })
 })
