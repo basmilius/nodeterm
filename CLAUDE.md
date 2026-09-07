@@ -1783,7 +1783,7 @@ else, and its context links must keep classifying across restarts).
   originally did with the answer was TRAVEL there (`travelToProjectRef`), and that was a screen
   hijack: the user looks at project B, an agent in project A runs `open-claude`, the tab switches
   and A's saved viewport is applied, so the camera appears to jump and zoom on a background agent's
-  say-so. Two membership lists now decide, and their difference is the whole design:
+  say-so. THREE membership lists now decide, and their differences are the whole design:
   - `STORE_ANSWERED_VERBS` (`needsLiveCanvas` false) = **no canvas is needed at either end** —
     `list` reads names, `send`/`reply` deliver into a tmux PANE, `sticky` rewrites a note,
     `open-project` acts on the projects store.
@@ -1794,10 +1794,42 @@ else, and its context links must keep classifying across restarts).
     node is upserted through `applyNodeMutation`, edges go through `appendCanvasLinks` (the edge
     counterpart, so the opener's rope and the fan-in bridge are not lost), `writeDisk` persists, and
     the reply is the ONE shared `coldOpenMessage` sentence with `queued: true`.
+  - `OFF_CANVAS_VERBS` (`answersOffCanvas` — `show-image`/`show-video`/`show-web`/`open-browser`)
+    = **a canvas is needed, the serialized one will do, and there is nothing to defer.** The node
+    these make has no session behind it: a page, a video, an image, a browser node is inert
+    wherever it sits, so writing it into the owning project's serialized nodes IS the whole effect
+    and it is complete when `writeDisk` returns. That is why it is a third set and not four more
+    entries in the second one — a cold open reports `queued: true`, and a caller told its
+    screenshot is queued waits for something that already happened. It gets
+    `offCanvasReplyClause` and `offCanvas: true` instead. **This was the half the cold-open fix
+    left open, and it is the half an agent meets most often**: a skill that renders its report as
+    HTML reaches for `show-web` every time it finishes, and every one of those calls used to yank
+    the user out of the project they were typing in. The verb bodies are untouched; three things
+    they read from the canvas are staged — the colour index (`nodeCount`), the placement source
+    (the stored node, hydrated through `nodeStatesToFlow` so its shape cannot drift from a live
+    one's) and the append, where `applyNodeMutation` + `appendCanvasLinks` + `writeDisk` replace
+    `setNodes` + `connect` + `markDirty`. The opener's edge is a **rope** and only a rope: a
+    display node has nothing to read, so a bridge there would grant a context link the live path
+    never draws. **`ctlProject` resolves from the SOURCE's project**, not the active one — off
+    canvas it decides the ssh flag, the browser session key and the media allowlist route; on
+    every other path the travel has already made the two the same project. None of the four takes
+    `--group`, which is why this set owes no worktree question; a verb joining it that does would,
+    because `cwdForNewNodeIn` subtracts `staleGroupIds`, which is epoch-scoped to the ACTIVE
+    project.
   Everything else keeps travelling **on purpose**: `write`/`close`/`group`/`move`/`arrange`/
-  `align`/`verify`/`spawn-team`/`open-worktree`/`open-browser`/`show-*` read live canvas state the
-  serialized copy does not carry (measured node sizes, worktree staleness, the React Flow edge
-  arrays). Route `active` is byte-identical to before. Route **`reopen` (a CLOSED project) cold-writes
+  `align`/`verify`/`spawn-team`/`open-worktree` read live canvas state the serialized copy does not
+  carry (measured node sizes, worktree staleness, the React Flow edge arrays). **`browser` is the
+  pair worth stating beside `open-browser`**: it NAVIGATES a mounted `<webview>` guest, which
+  exists only while its project is on screen, so it travels; `open-browser` merely places the node
+  and its guest is created when that project is next shown, exactly as a cold-opened terminal's PTY
+  is. Route `active` is byte-identical to before.
+  **The human is told, once, in the other voice.** The reply goes to the agent; without a strip the
+  person sees nothing at all, and the whole point of not travelling is that the choice to go and
+  look stays theirs — a choice they can only make if they are told there is something to look at.
+  `offCanvasNoticeText` names the project and the button is `travelToNode` (which reopens a closed
+  project first and resolves off the SERIALIZED nodes the write has already made). It is **sticky**:
+  every other info strip reports something the user just did and is watching, this one reports work
+  that landed while they were busy elsewhere, and once it fades nothing anywhere says it happened. Route **`reopen` (a CLOSED project) cold-writes
   too and does NOT reopen the tab** — closing is the user's explicit "park this, keep it running", so
   restoring the tab *and* activating it is the loudest form of the hijack; the reply names the closure
   so a caller does not report a session as started. On the cold path `--group`/`--after` ARE resolved
