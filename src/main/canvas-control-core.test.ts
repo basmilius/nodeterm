@@ -741,4 +741,23 @@ describe('the --project clause tells the truth about travel (review #363 I-1 + M
       expect(body, `${name}: tab not reopened`).toMatch(/not reopened/i)
     }
   })
+
+  it('both bodies say the DISPLAY verbs do not switch the view either — and are never queued', () => {
+    // The second half of the same promise, and the half an agent meets most often: a skill that
+    // renders its report as HTML reaches for `show-web` every time it finishes. Two facts it acts
+    // on, and the second is why these are not folded into the cold-open sentence: the node is
+    // COMPLETE when placed, so a caller told "queued" would wait for something that has already
+    // happened. The `offCanvas` field is what it reads instead.
+    for (const [name, body] of bodies) {
+      const start = body.indexOf('`show-image')
+      const end = body.indexOf('`group --nodes', start)
+      expect(start, `${name}: the display-verb entries`).toBeGreaterThan(-1)
+      expect(end, `${name}: the group entry after them`).toBeGreaterThan(start)
+      const clause = body.slice(start, end)
+      expect(clause, `${name}: never switches the view`).toMatch(/never switch(es)? the user'?s view/i)
+      expect(clause, `${name}: names the field`).toContain('offCanvas')
+      // THE STALE CLAIM the split exists to prevent: a display verb reported as queued.
+      expect(clause, `${name}: not queued`).toMatch(/nothing (here )?is (ever )?\`?queued/i)
+    }
+  })
 })

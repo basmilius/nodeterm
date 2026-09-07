@@ -379,6 +379,11 @@ export function buildCanvasControlInstructions(shimPath: string): string {
     '- `show-image <path>` / `show-video <path>` — open a media file as a node.',
     '- `show-web (--url U | --file P.html | --html "<...>")` — open a web viewer.',
     '- `open-browser --url U` — open a navigable browser node.',
+    '  These four NEVER switch the user\'s view either. If your project is not on screen the node is',
+    '  saved into it and waits there — the reply says which project, and adds `offCanvas: true`.',
+    '  Nothing is queued: unlike a session, a page or an image is finished the moment it is placed,',
+    '  so there is nothing to wait for and nothing to poll. Say where it went rather than assuming',
+    '  the user saw it.',
     '- `group --nodes <id,id> [--label L] [--color C]` — wrap sibling nodes or sibling groups in a new labeled frame.',
     '  Every id must share one container. `ungroup --group <id>` dissolves a frame and promotes its direct',
     '  children into the frame\'s parent. `move --nodes <id,id> [--group <id>]` reparents nodes or groups INTO an',
@@ -834,6 +839,12 @@ Verbs:
 - \`show-video <path>\` — open a video file as a player node.
 - \`show-web (--url U | --file P.html | --html "<...>")\` — open a web viewer (live URL or local HTML you wrote).
 - \`open-browser --url U\` — open a navigable browser (back/forward/address bar) at a URL.
+  **These four never switch the user's view either.** If the project you are running in is not the
+  one on screen, the node is saved into it and waits there; the reply names the project and carries
+  \`offCanvas: true\`, and if that project is **closed** it says so — the tab is not reopened for
+  you. Nothing here is ever \`queued\`: unlike a session, a page, a video or an image is finished
+  the moment it is placed, so there is nothing to wait for and nothing to poll. What this costs you
+  is the assumption that the user saw it — tell them where it went.
   In an SSH project, nodes you open run on the HOST (same machine as you). The media viewers
   render on the DESKTOP: \`show-image\` and \`show-video\` still work with a host path (the
   file is read/fetched back over the connection), but \`show-web --file/--html\` is refused —
