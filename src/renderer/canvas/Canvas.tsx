@@ -247,6 +247,7 @@ import {
   routeControlSource,
   needsLiveCanvas,
   canColdOpen,
+  answersOffCanvas,
   sourceIsControlCapable,
   storedNodeListing,
   answerBrowserResolve,
@@ -257,6 +258,8 @@ import {
   coldGroupChildCount,
   coldOpenMessage,
   coldPlaceBelow,
+  offCanvasNoticeText,
+  offCanvasReplyClause,
   coldResolveAfter,
   coldResolveGroup,
   groupSizeFor,
@@ -939,9 +942,19 @@ export function Canvas() {
   // Result of a worktree operation (merge / remove). These used to be `window.alert`s — a modal
   // that blocks the whole app to say "Merged feat into main." Shown as a strip in the existing
   // top-banner column instead; an 'info' one fades itself out, an 'error' stays until dismissed.
-  const [notice, setNotice] = useState<{ kind: 'info' | 'error'; text: string } | null>(null)
+  // `sticky` opts an info strip out of the fade. The dwell exists because a worktree result
+  // reports something the user just did and is watching; an off-canvas notice reports work that
+  // landed in ANOTHER project while they were busy elsewhere, and once it fades nothing anywhere
+  // says it happened. `action` is an ordinary next step, not an install or a reload, so it wears
+  // the app's default button rather than `.announce-banner__btn`'s accent treatment.
+  const [notice, setNotice] = useState<{
+    kind: 'info' | 'error'
+    text: string
+    sticky?: boolean
+    action?: { label: string; run: () => void }
+  } | null>(null)
   useEffect(() => {
-    if (notice?.kind !== 'info') return
+    if (notice?.kind !== 'info' || notice.sticky) return
     const t = setTimeout(() => setNotice(null), noticeDwellMs(notice.text))
     return () => clearTimeout(t)
   }, [notice])
@@ -5808,6 +5821,9 @@ export function Canvas() {
   // Same reason as worktreeControlRef below: the agent-control handler needs the CURRENT
   // travelToProject (defined far below, after the project actions it composes).
   const travelToProjectRef = useRef<(projectId: string) => void>(() => {})
+  /** Latest `travelToNode`, for the agent-control handler's off-canvas notice — same reason as
+   *  travelToProjectRef: that effect mounts ONCE, so it cannot close over the callback. */
+  const travelToNodeRef = useRef<(nodeId: string) => void>(() => {})
 
   // Latest worktree callbacks for the agent-control handler. That effect mounts ONCE (empty
   // deps) and these callbacks' identities change with the active project (activeProjectId /
@@ -8856,8 +8872,35 @@ export function Canvas() {
   // main never hangs to its 120s timeout.
   useEffect(() => {
     return api.onAgentControl(async ({ requestId, sourceNodeId, verb, args }) => {
-      const reply = (r: { ok: boolean; message?: string; result?: unknown; error?: string }) =>
+      // Set by the OFF-CANVAS branch below (`answersOffCanvas`): the verb runs against the owning
+      // project's SERIALIZED nodes because that project is not on screen. It stays undefined on
+      // every other path, which is what makes the on-screen behaviour byte-identical.
+      let offCanvas: { project: Project; closed: boolean; created: string[] } | undefined
+      const reply = (r: { ok: boolean; message?: string; result?: unknown; error?: string }) => {
+        // Say WHERE it went, once, in both voices. The verb bodies already say WHAT they made, so
+        // none of them has to know about routing: the clause is appended here and the human strip
+        // is raised here. A refusal decorates nothing — it created no node and moved no view.
+        if (offCanvas && r.ok && offCanvas.created.length) {
+          const { project, closed, created } = offCanvas
+          r = {
+            ...r,
+            message: (r.message ?? '') + offCanvasReplyClause(project.name, { closed }),
+            result: { ...(r.result as object), projectId: project.id, offCanvas: true }
+          }
+          const first = created[0]
+          setNotice({
+            kind: 'info',
+            sticky: true,
+            text: offCanvasNoticeText(project.name, created.length),
+            // The notice is about one thing that appeared, so the button goes to that thing —
+            // `travelToNode` reopens a closed project first and resolves off the SERIALIZED nodes,
+            // which the write above has already made. Landing on the project's saved camera
+            // instead would leave the user hunting for it.
+            action: { label: 'Go there', run: () => travelToNodeRef.current(first) }
+          })
+        }
         api.sendAgentControlResult({ requestId, ...r })
+      }
       // `--dry-run` (issue #532): validate + report, mutate nothing. Only DRY_RUN_VERBS reach
       // this process with the flag set — main's setControlHandler refuses it for every other
       // verb before forwarding — so the per-case branches below are the whole renderer story:
@@ -9574,13 +9617,45 @@ export function Canvas() {
             })
             return
           }
-          travelToProjectRef.current(route.projectId)
+          // ── OFF CANVAS ──────────────────────────────────────────────────────────────────
+          // A DISPLAY verb (`show-image` / `show-video` / `show-web` / `open-browser`) whose own
+          // project is not on screen. Same objection as the cold open above and the same answer,
+          // one set wider: an agent that renders its output as a node is the commonest reason a
+          // background session touches the canvas at all, and every one of those calls used to
+          // yank the human out of the project they were typing in.
+          //
+          // The difference from the cold open is that there is nothing to defer. These four make
+          // an INERT node — a page, a video, an image, a browser — which is complete the moment it
+          // is written, so the verb body runs unchanged and only the three things it touches on
+          // the canvas are staged: the node counter, the placement source, and the append.
+          // See `answersOffCanvas` in lib/controlRouting for why `browser` is not in the set.
+          if (answersOffCanvas(verb)) {
+            const ocStore = useProjects.getState()
+            const owner = ocStore.getProject(route.projectId)
+            const ocSrc = owner?.nodes.find((n) => n.id === sourceNodeId)
+            // Same authorization boundary and the same sentence as every other path — a stored
+            // node carries the agent id the live one would (`data.agentId` is serialized).
+            if (!owner || !ocSrc || !sourceIsControlCapable(ocSrc.agentId)) {
+              reply({ ok: false, error: 'source node is not a control-capable agent' })
+              return
+            }
+            offCanvas = { project: owner, closed: route.kind === 'reopen', created: [] }
+            // The body below reads the source for its title, cwd and placement geometry. Hydrate
+            // the ONE stored node rather than hand-rolling a partial: `nodeStatesToFlow` is what
+            // the project load itself uses, so the shape cannot drift from a live node's. It has
+            // no `measured` (nothing rendered it), which `placeBelow` already falls back for.
+            src = nodeStatesToFlow([ocSrc])[0] as CanvasNode
+          } else {
+            travelToProjectRef.current(route.projectId)
+          }
         }
         // Wait for the node to show up on the canvas: after a travel, because the active-project
         // effect hydrates React Flow a tick later; on `active`, because a control call can land
         // while the BOOT load of the owning project is still in flight — the very moment a
         // re-adopted agent starts talking again. `unknown`/`blocked` have no canvas to wait for.
-        if (route.kind !== 'unknown' && route.kind !== 'blocked') {
+        // An off-canvas answer has its source already and is deliberately NOT waiting for a
+        // canvas: waiting for one is what travelling was for.
+        if (!offCanvas && route.kind !== 'unknown' && route.kind !== 'blocked') {
           src = await waitForCanvasNode(() => nodesRef.current.find((n) => n.id === sourceNodeId))
         }
       }
@@ -9606,10 +9681,16 @@ export function Canvas() {
       // got it right; every control verb passed `undefined` and got it wrong.) The factory reads
       // the node's cwd out of `remoteCwd`, so the effective cwd is threaded through there —
       // otherwise `--cwd` would be silently replaced by the project root.
-      const ctlProject = (() => {
-        const st = useProjects.getState()
-        return st.getProject(st.activeProjectId ?? '')
-      })()
+      // Off canvas the two are different projects, and this one decides the ssh flag, the browser
+      // session key and the media allowlist route. Reading `activeProjectId` there would answer a
+      // background agent's call with whatever the human happens to be looking at; on every other
+      // path the travel has already made the two the same project, so nothing changes.
+      const ctlProject =
+        offCanvas?.project ??
+        (() => {
+          const st = useProjects.getState()
+          return st.getProject(st.activeProjectId ?? '')
+        })()
       const ctlSsh = ctlProject?.ssh
       const sshFor = (cwd?: string) => nodeSshFor(ctlSsh, cwd)
       // Place opened nodes BELOW the source and rope them to it (source flow-out → target
@@ -9678,11 +9759,33 @@ export function Canvas() {
         // relative coords) must pass through untouched — re-running parentInto would read its
         // relative position as absolute and land it off-frame.
         const placed = node.parentId ? node : src.parentId ? parentInto(node, src.parentId) : node
+        if (offCanvas) {
+          // The staged twin of the three lines below, and the whole of the off-canvas write. The
+          // live setters all address the ACTIVE canvas, which is some other project's here — they
+          // would put the node in front of the wrong person and dirty the wrong file.
+          // `applyNodeMutation` + `appendCanvasLinks` are the store paths a peer mutation and the
+          // cold open already take, and `writeDisk` is what persists them.
+          const ocStore = useProjects.getState()
+          ocStore.applyNodeMutation(offCanvas.project.id, {
+            op: 'upsert',
+            node: flowToNodeStates([placed])[0]
+          })
+          ocStore.appendCanvasLinks(offCanvas.project.id, {
+            ropes: [ropeEdge(`ctrl-${sourceNodeId}-${placed.id}`, sourceNodeId, placed.id)]
+          })
+          void writeDisk()
+          offCanvas.created.push(placed.id)
+          return placed.id
+        }
         setNodes((ns) => [...ns, placed])
         connect(placed.id)
         markDirty()
         return placed.id
       }
+      // The colour index every factory takes. Off canvas the live array holds another project's
+      // nodes, so counting it would colour by a number that has nothing to do with where the node
+      // lands. One name for the two sources, so no verb body has to ask which it is on.
+      const nodeCount = () => (offCanvas ? offCanvas.project.nodes.length : nodesRef.current.length)
       // Grid slots INSIDE a group frame (open-agent --group): 2 columns of terminal-sized
       // cells under the header. Pure geometry — the frame is grown to fit before children land.
       // `groupSlot`/`groupSizeFor` live in lib/coldOpen so the COLD path (an open answered out of a
@@ -10087,7 +10190,7 @@ export function Canvas() {
             // (`sshFs` routes fs.readBinary over the ControlMaster) — reading it locally would
             // either miss or, worse, open a same-named local file.
             const id = addAndConnect(
-              createEditorNode(nodesRef.current.length, args.path, placeBelow(), !!ctlSsh)
+              createEditorNode(nodeCount(), args.path, placeBelow(), !!ctlSsh)
             )
             reply({ ok: true, message: `showing image ${id}`, result: { id } })
             return
@@ -10103,7 +10206,7 @@ export function Canvas() {
             // same-named local file. Local projects allowlist the local path as before.
             if (!ctlSsh) await window.nodeTerminal.media.allow(args.path)
             const id = addAndConnect(
-              createVideoNode(nodesRef.current.length, args.path, placeBelow(), !!ctlSsh)
+              createVideoNode(nodeCount(), args.path, placeBelow(), !!ctlSsh)
             )
             reply({ ok: true, message: `showing video ${id}`, result: { id } })
             return
@@ -10130,7 +10233,7 @@ export function Canvas() {
             }
             // For an agent-provided --file (not html we just wrote), allowlist it first.
             if (webSrc.filePath && args.file) await window.nodeTerminal.media.allow(webSrc.filePath)
-            const id = addAndConnect(createWebNode(nodesRef.current.length, webSrc, placeBelow()))
+            const id = addAndConnect(createWebNode(nodeCount(), webSrc, placeBelow()))
             reply({ ok: true, message: `showing web ${id}`, result: { id } })
             return
           }
@@ -10154,7 +10257,7 @@ export function Canvas() {
               reply({ ok: false, error: "open-browser: this project's id cannot be used as a browser session key" })
               return
             }
-            const id = addAndConnect(createBrowserNode(nodesRef.current.length, browserUrl, placeBelow(), partition))
+            const id = addAndConnect(createBrowserNode(nodeCount(), browserUrl, placeBelow(), partition))
             // Return the project id + partition so main can record ownership in its in-memory
             // ledger (browser-control-ledger.ts). Main gates the claim on its OWN `verified` verdict
             // and keys it to the verified caller — these fields are descriptive (release-by-project,
@@ -12582,6 +12685,12 @@ export function Canvas() {
     [focusNodeById, reopenProject]
   )
 
+  // Published BELOW the callback it mirrors, not above it: an effect placed earlier would read a
+  // const that is only initialized later in the body. That works today and breaks on a reorder.
+  useEffect(() => {
+    travelToNodeRef.current = travelToNode
+  })
+
   // OS-notification click → focus the originating node (see the note beside focusNodeById:
   // travelToNode, not focusNodeById, so a closed project's tab is reopened first).
   useEffect(() => window.nodeTerminal.onFocusNode(travelToNode), [travelToNode])
@@ -13055,6 +13164,18 @@ export function Canvas() {
             <div className="announce-banner__content">
               <span className="announce-banner__body">{notice.text}</span>
             </div>
+            {notice.action && (
+              <button
+                className="announce-banner__action"
+                onClick={() => {
+                  const run = notice.action?.run
+                  setNotice(null)
+                  run?.()
+                }}
+              >
+                {notice.action.label}
+              </button>
+            )}
             <button
               className="announce-banner__close"
               title="Dismiss"
