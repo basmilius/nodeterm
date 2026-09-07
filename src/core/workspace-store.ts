@@ -147,8 +147,10 @@ export class WorkspaceStore {
    *  told about yet. The one discriminator between the two ways our cache can lack a node the server
    *  has: "the user deleted it here" (the deletion must travel — never rescue it back) and "we simply
    *  never had it" (the phone appended it while we were looking away — never delete it). Both rescue
-   *  sites consult it; a confirmed write / an adopt drops the entry, because the server then already
-   *  reflects our side. Runtime-only: after a restart an UNMIRRORED clear is indistinguishable from a
+   *  sites consult it. An id is retired ONLY by a READ that no longer lists it (`confirmClearedDeletions`)
+   *  or by an adopt that overrules our deletions — never by a write ack, which is optimistic for the
+   *  throttle's trailing write and cost the 2026-09-06 resurrection bug.
+   *  Runtime-only: after a restart an UNMIRRORED clear is indistinguishable from a
    *  node we never had, and the tie is broken toward rescuing (a resurrected node is visible and
    *  deletable again; a deleted session node is gone with no trace of where it went). */
   private clearedNodes = new Map<string, Set<string>>()
@@ -1057,6 +1059,12 @@ export class WorkspaceStore {
       // extra round-trip per CHANGED save (an unchanged, already-mirrored save still reads nothing).
       if (changedSinceLoad || this.unmirrored.has(e.id)) await this.mirrorSshCache(e)
     }
+    // Tombstones are retired by a server read (`confirmClearedDeletions`), so a project that left
+    // the index would keep its set for the rest of the run with nothing left to read it. Bound it.
+    if (this.clearedNodes.size) {
+      const liveIds = new Set(index.entries.map((e) => e.id))
+      for (const id of this.clearedNodes.keys()) if (!liveIds.has(id)) this.clearedNodes.delete(id)
+    }
 
     // Back up the raw v2 file BEFORE the v3 index flip: a crash between the two must never leave a
     // migrated tree (project files already written above) without its pre-migration backup.
@@ -1667,8 +1675,8 @@ export class WorkspaceStore {
     if (ok) {
       this.recordMirrored(e.id, content)
       this.unmirrored.delete(e.id)
-      // The server now holds exactly our cache, deletions included — nothing left to remember.
-      this.clearedNodes.delete(e.id)
+      // The tombstones deliberately SURVIVE this ack — see `confirmClearedDeletions`. An ack is not
+      // evidence that the server holds our deletions; only a read that no longer lists them is.
     } else {
       this.unmirrored.add(e.id)
     }
@@ -1695,6 +1703,7 @@ export class WorkspaceStore {
       if (parsed?.version === 1 && Array.isArray(parsed.nodes)) remote = parsed
     } catch { /* corrupt server file — our cache is the only readable copy; it is written as-is */ }
     if (!remote || remote.id !== e.cache.id) return null
+    this.confirmClearedDeletions(e.id, remote.nodes)
     const rescued = this.rescuableNodes(e.id, e.cache.nodes, remote.nodes)
     if (!rescued.length) return null
     // The merged set must outrank both sides, or the next reconcile could rev-decide it away.
@@ -1722,6 +1731,33 @@ export class WorkspaceStore {
     const cleared = this.clearedNodes.get(projectId)
     const missing = nodesMissingFrom(ours, theirs)
     return cleared ? missing.filter((n) => !cleared.has(n.id)) : missing
+  }
+
+  /**
+   * Retire the tombstones the SERVER has confirmed: ids `clearedNodes` holds that the file we just
+   * read no longer lists. Our deletion has travelled, so the record has done its job — and the id
+   * becomes an ordinary unknown one again, so a later re-appearance (another machine restored the
+   * node, a git checkout) is rescued like any other foreign addition.
+   *
+   * This — plus an adopt, which overrules our deletions outright — is the ONLY thing that retires a
+   * tombstone. It used to be the mirror write's ACK, and that was the 2026-09-06 field bug: the real
+   * remote IO acks the 5 s throttle's TRAILING write optimistically, before it is on the wire (see
+   * `recordMirrored`). When the connection died inside that window the write was dropped,
+   * `markUnmirrored` re-owed the mirror but had nothing with which to restore the tombstones, and the
+   * retry's re-read found all 16 just-deleted nodes still on the server with no filter left — so it
+   * "rescued" every one of them back onto the canvas and announced them as sessions from another
+   * device. An ack is a claim about a write; a tombstone is a claim about the server's CONTENT, and
+   * only a read can settle that. Same rule the reconciler already lives by ("a failed read is never
+   * evidence of absence") applied to the other direction.
+   *
+   * It costs no extra round-trip: both call sites are reads the store already makes.
+   */
+  private confirmClearedDeletions(projectId: string, remoteNodes: CanvasNodeState[]): void {
+    const cleared = this.clearedNodes.get(projectId)
+    if (!cleared) return
+    const onServer = new Set(remoteNodes.map((n) => n.id))
+    for (const id of cleared) if (!onServer.has(id)) cleared.delete(id)
+    if (!cleared.size) this.clearedNodes.delete(projectId)
   }
 
   /** Record the nodes a save removed from an ssh cache (see `clearedNodes`). */
@@ -1769,6 +1805,9 @@ export class WorkspaceStore {
         const parsed = JSON.parse(res.content) as ProjectFileV1
         if (parsed?.version === 1 && Array.isArray(parsed.nodes)) remote = parsed
       } catch { /* corrupt remote file → treat as absent, our cache pushes up */ }
+      // Before the self-write nulling below: an id absent from the file ON THE SERVER is confirmed
+      // gone whoever wrote those bytes, and an older own write that still lists it confirms nothing.
+      if (remote && e.cache && remote.id === e.cache.id) this.confirmClearedDeletions(e.id, remote.nodes)
       // Self-write echo: the server holds bytes this store itself mirrored (a poll reading right
       // behind a save's write, or an OLDER own write the 5 s throttle has not yet replaced).
       // Nothing foreign is there to adopt, merge or announce — decide exactly as if the remote
@@ -1860,7 +1899,8 @@ export class WorkspaceStore {
       if (ok) {
         this.recordMirrored(e.id, content)
         this.unmirrored.delete(e.id)
-        this.clearedNodes.delete(e.id) // the server holds our deletions now
+        // Tombstones survive the ack here too (see `confirmClearedDeletions`): this write is the
+        // same optimistically-acked throttled write the mirror path makes.
       } else this.unmirrored.add(e.id)
     }
     // Surface a rescued merge to the renderer even on a read-only poll (pushIfStanding:false) — the
