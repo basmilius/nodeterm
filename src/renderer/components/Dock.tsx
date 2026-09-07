@@ -422,43 +422,46 @@ export function Dock({
                       </span>
                     </button>
                     <span className="dock-menu__row-actions">
-                      <button
-                        className="dock-menu__row-act"
-                        aria-label={`Update layout ${layout.name} to the current arrangement`}
-                        title="Update to the current arrangement"
-                        onClick={(e) => {
-                          // The row itself restores; these three must not.
-                          e.stopPropagation()
-                          setLayoutMenuOpen(false)
-                          onUpdateLayout(layout)
-                        }}
-                      >
-                        <UpdateIcon />
-                      </button>
-                      <button
-                        className="dock-menu__row-act"
-                        aria-label={`Rename layout ${layout.name}`}
-                        title="Rename"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setLayoutMenuOpen(false)
-                          onRenameLayout(layout)
-                        }}
-                      >
-                        <PencilIcon />
-                      </button>
-                      <button
-                        className="dock-menu__row-act"
-                        aria-label={`Delete layout ${layout.name}`}
-                        title="Delete"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setLayoutMenuOpen(false)
-                          onDeleteLayout(layout)
-                        }}
-                      >
-                        <CrossIcon />
-                      </button>
+<Tooltip label="Update to the arrangement on screen" placement="right">
+                        <button
+                          className="dock-menu__row-act"
+                          aria-label={`Update layout ${layout.name} to the current arrangement`}
+                          onClick={(e) => {
+                            // The row itself restores; these three must not.
+                            e.stopPropagation()
+                            setLayoutMenuOpen(false)
+                            onUpdateLayout(layout)
+                          }}
+                        >
+                          <UpdateIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip label="Rename" placement="right">
+                        <button
+                          className="dock-menu__row-act"
+                          aria-label={`Rename layout ${layout.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setLayoutMenuOpen(false)
+                            onRenameLayout(layout)
+                          }}
+                        >
+                          <PencilIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip label="Delete" placement="right">
+                        <button
+                          className="dock-menu__row-act"
+                          aria-label={`Delete layout ${layout.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setLayoutMenuOpen(false)
+                            onDeleteLayout(layout)
+                          }}
+                        >
+                          <CrossIcon />
+                        </button>
+                      </Tooltip>
                     </span>
                   </div>
                 ))
