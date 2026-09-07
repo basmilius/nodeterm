@@ -127,11 +127,23 @@ describe('the off-canvas dispatch block (source pins)', () => {
     expect(off).not.toContain('markDirty()')
   })
 
-  it('the opener’s rope is written too — a display node still hangs off its agent', () => {
+  it('the opener’s edge is a ROPE, and only a rope', () => {
     // Same edge the live path's `connect` draws, under the same id, so the node reads as
-    // "produced by that conversation" when the project is next shown.
-    const body = addAndConnectBody()
-    expect(body).toContain('ropeEdge(`ctrl-${sourceNodeId}-${placed.id}`, sourceNodeId, placed.id)')
+    // "produced by that conversation" when the project is next shown. `appendCanvasLinks` takes
+    // both arrays and the two mean different things: a rope is display-only lineage, a bridge is
+    // a context link that authorizes a READ. A display node has nothing to read, and the live
+    // path draws no bridge for one — writing it here would hand an agent a context edge on
+    // another project's canvas that nobody asked for, and the swap is a one-word edit.
+    const off = code(
+      addAndConnectBody().slice(
+        addAndConnectBody().indexOf('if (offCanvas) {'),
+        addAndConnectBody().indexOf('setNodes((ns) =>')
+      )
+    )
+    expect(off).toContain(
+      'ropes: [ropeEdge(`ctrl-${sourceNodeId}-${placed.id}`, sourceNodeId, placed.id)]'
+    )
+    expect(off).not.toContain('bridges:')
   })
 
   it('the colour index comes from the owning project, not the live array', () => {
