@@ -13,6 +13,7 @@ import type { WhisperModelInfo } from './speech'
 import type { ProjectKanbanGitHub } from './github-issues'
 import type { CodexAccount } from './codex-account'
 import type { ProjectIcon, ProjectIconPickResult } from './project-icon'
+import type { CanvasLayout, LayoutViewports } from './canvas-layout'
 import type {
   ModelDiscoveryResult,
   ModelGatewayCredentialStatus,
@@ -754,6 +755,19 @@ export interface Project {
    *  `IndexEntryV3.breadcrumbs`, never emitted into the shared project file (a repo must not carry
    *  one person's wandering camera history). */
   breadcrumbs?: NavStop[]
+  /**
+   * Named geometry snapshots for this canvas - see @shared/canvas-layout for what a layout may
+   * carry and why it may carry nothing else.
+   *
+   * CONTENT, git-shared via `.nodeterm/project.json` like `kanban`: node geometry is already
+   * shared content in that file and a restore writes exactly those fields, so the snapshot belongs
+   * beside them. The camera precedent (`viewport`, `breadcrumbs`) deliberately does NOT reach
+   * here - those are camera facts, and nobody else's canvas moves when I pan.
+   */
+  layouts?: CanvasLayout[]
+  /** This machine's camera per layout, keyed by layout id. MACHINE-LOCAL: rides
+   *  `IndexEntryV3.layoutViewports`, never the shared file - same rule as `breadcrumbs`. */
+  layoutViewports?: LayoutViewports
   /**
    * Closed projects are hidden from the tab bar but kept on disk with all their nodes (and their
    * tmux sessions left running) so they can be reopened from the start screen's "Recently closed"

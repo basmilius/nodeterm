@@ -1171,8 +1171,12 @@ export function createProject(
   }
 }
 
-const GROUP_PAD = 28
-const GROUP_HEADER = 34
+/** Clearance a group frame keeps around its children on every side, and the extra strip above
+ *  them for its label pill. Exported so anything that has to size a frame the way
+ *  `fitGroupToChildren` does (canvas layouts grow a restored frame around nodes the layout
+ *  predates) matches it exactly instead of re-guessing the numbers. */
+export const GROUP_PAD = 28
+export const GROUP_HEADER = 34
 
 const nodeW = (n: CanvasNode) => n.measured?.width ?? (n.width as number) ?? 0
 const nodeH = (n: CanvasNode) => n.measured?.height ?? (n.height as number) ?? 0

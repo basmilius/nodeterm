@@ -2923,6 +2923,69 @@ the Settings section and ShortcutsPanel start disagreeing about what a chord mea
     shells boot — no new bridge member); mobile is N/A (no canvas, no camera); the kanban board is
     likewise N/A, and a project that activates ON the board neither shows nor spends its
     once-per-run resume card (it would sit invisible under the opaque overlay).
+- **Canvas layouts** (`@shared/canvas-layout`, `renderer/lib/canvasLayout.ts` capture/apply +
+  `renderer/lib/canvasLayoutView.ts` for the menu wording and the fallback camera; Dock button
+  after "Fit view", mirrored in ⌘K) - a NAMED SNAPSHOT OF NODE GEOMETRY (position, size,
+  collapse state) per project, so an arrangement built for the ultrawide can be restored after a
+  day on the laptop screen. Load-bearing rules:
+  - **Geometry only, and that is the whole safety story.** A restore never creates, deletes,
+    renames, recolors, reparents or respawns a node, and never touches a tmux session - so the
+    worst a bad layout can do is move things, which ⌘Z takes back (the debounced history effect
+    picks up the `setNodes` like any other placement, which is why restore has no confirm and
+    delete does).
+  - **The content half is git-shared, the camera half is machine-local.** `Project.layouts` rides
+    `.nodeterm/project.json` beside `nodes` and `kanban`, because node geometry is already shared
+    content in that file and a restore writes exactly those fields. `Project.layoutViewports` (this
+    machine's camera per layout) rides `IndexEntryV3` in `workspace.json`. **The camera precedent
+    (`viewport`, `breadcrumbs`) deliberately does NOT reach the geometry**: those are facts about
+    where one person was looking, and nobody else's canvas moves when I pan - but where the nodes
+    SIT is the canvas itself, and sharing an arrangement with the repo is the point.
+  - **Restore rules** (`applyLayout`, pure + tested): a live node the layout does not mention is
+    left exactly where it is, never tidied or stacked at the origin; an entry whose node is gone is
+    skipped and counted, never resurrected; a frame the layout addresses gets the rect the user
+    saved and is NOT re-fitted afterwards (the fit would overwrite it and the arrangement would
+    drift a little on every restore), while a frame the layout does not mention but whose
+    descendant just moved IS re-fitted, deepest first, so an out-of-layout child cannot be clamped
+    by `extent:'parent'` into an inverted range. The whole layout lands in ONE transform as an
+    explicit two-pass (resolve every target root origin, then emit) - a reduce over N placements
+    re-fits an ancestor between two of them, so the second node is measured against a frame the
+    first just moved and the result is differently wrong depending on array order. `collapsed` is
+    restored with the CHROME height on the node and the real one in `expandedHeight` (the
+    `flowToNodeStates` rule: the stored height is ALWAYS the expanded one, or a
+    save-while-collapsed shrinks the node permanently). `premaxRect` and every non-geometry field
+    ride the spread untouched - a restore is a placement, not a maximize.
+  - **The camera is applied with `setViewport`, NEVER `fitView`** - the "Go to node" invariant
+    above, and a canvas that has just been rearranged is exactly the unmeasured state where a
+    queued fit collapses the bounds and flies to the origin. This machine's recorded camera wins;
+    a layout restored here for the first time (a teammate's, or one saved on another machine) gets
+    `layoutFramingViewport`, which is the core `framingViewport` rule rewritten locally because the
+    renderer has no import path into `src/core` and because a layout's rects are ROOT-space, so
+    unlike `CanvasNodeState` positions every entry anchors the camera.
+  - **The window size is a LABEL, never a matcher.** `CanvasLayout.window` is the author's window
+    at save time, shown in the menu so the user can tell the two arrangements apart. Nothing
+    auto-applies a layout on a display change: the file travels, so matching on it would pick a
+    stranger's monitor for this user's screen - and a canvas that rearranges itself when you plug
+    in a projector is worse than one that does not.
+  - **Cap 20** (`CANVAS_LAYOUTS_CAP`; a full node-geometry list in a file that is committed and
+    cloned), name capped at 60, and **both sanitized on BOTH serializer seams** (`fileToProject`
+    on the way in, `projectToFile` on the way out) - the same two-seam rule `normalizeNodeIcon`
+    and `sanitizeNodeTriggers` follow, because live node data is reachable by a peer canvas
+    mutation and whatever we write is what the next machine trusts. `sanitizeLayouts` DROPS a
+    layout whole rather than repairing it: a repaired layout no longer describes the arrangement it
+    is named after, and a non-finite coordinate is a white-screen crash (`adoptUserNodes`
+    dereferences the position unguarded) that `JSON.stringify` then writes back as `null`.
+  - **Downgrade note:** a build older than this one drops `layouts` on its first save, because
+    `projectToFile` builds an explicit object and simply does not know the field. The layouts are
+    gone from that checkout's file until someone on a current build saves again; nothing else
+    breaks, and the machine-local cameras are pruned to match on the next load.
+  - **Surfaces:** Desktop full; **Server Edition full with NO new IPC** (pure renderer plus
+    `workspace.save`, which both shells already boot); **relay tabs REFUSED with the reason** -
+    the Dock button is disabled with "Layouts are managed on the host" and the ⌘K entries are
+    omitted (the palette has no disabled row), because a relay tab is a live connection to another
+    machine and never a workspace on this disk; kanban N/A (a board shows cards, and geometry is
+    what a column layout discards); mobile N/A - *nodeterm mobile* attaches to tmux sessions over
+    the transport protocol and has no canvas, so surfacing a layout means extending that protocol
+    (follow-up in the iOS repo).
 - **Command palette** (`CommandPalette.tsx`): ⌘/Ctrl+K; `Canvas.buildCommands` (create,
   switch project, jump to node by title/tag, open file…).
 - **Explorer** (`ExplorerPanel.tsx`, 🗂 / ⌘⇧E): lazy file tree of the active project `cwd`

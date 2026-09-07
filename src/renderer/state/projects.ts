@@ -16,12 +16,29 @@ import { collisionSeed, derivedProjectId } from '@shared/project-id'
 import type { ProjectCapability } from '@shared/project-capabilities'
 import type { ProjectIcon } from '@shared/project-icon'
 import { recordCapabilityAck, type CapabilityAnswer } from '@shared/project-capability-consent'
+import {
+  CANVAS_LAYOUTS_CAP,
+  CANVAS_LAYOUT_NAME_MAX,
+  pruneLayoutViewports,
+  type CanvasLayout
+} from '@shared/canvas-layout'
 import { applyCanvasMutation, createProject, reorderGroupWithinParent } from './workspace'
 import { markWorkspaceDirty } from './workspaceDirty'
 import { folderName } from '../lib/projectOpen'
 // One order-independent key for an edge's endpoints — the SAME rule `hiddenLinkIds` uses, so a
 // rope and the bridge it covers are recognized as one relationship here too.
 import { pairKey as bridgePairKey } from '../lib/noteLink'
+
+/**
+ * What `saveLayout` did.
+ *
+ * A union rather than a boolean because the refusals need different sentences: the cap is a state
+ * the user has to resolve (delete one first), while an unusable name is a typo. Neither may be
+ * swallowed - this store is not the only writer of `layouts` (a git pull delivers them too), so
+ * the cap can be reached by work the user never did, and a Save button that quietly does nothing
+ * is exactly the failure this return value exists to prevent.
+ */
+export type SaveLayoutResult = 'saved' | 'cap-reached' | 'invalid-name' | 'unknown-project'
 
 interface ProjectsState {
   projects: Project[]
@@ -168,6 +185,43 @@ interface ProjectsState {
   consumeClosedSession(projectId: string, entryId: string): ClosedSessionEntry | undefined
   /** Removes a closed-session entry without reopening it. */
   discardClosedSession(projectId: string, entryId: string): void
+
+  /**
+   * Saves a layout (replacing by id) together with this machine's camera for it.
+   *
+   * The two halves land in ONE write because they are meaningless apart: the layout is CONTENT in
+   * the git-shared project file, the camera is machine-local index state, and a camera whose
+   * layout never landed is orphan bytes in a file that is forever.
+   *
+   * `now` is the caller's clock rather than a `Date.now()` in here, so the snapshot the caller
+   * built and the timestamps stored beside it cannot disagree, and a test can prove `createdAt`
+   * survived a replace. The store stamps both timestamps itself: they order the list the user
+   * reads, and a caller must not be able to backdate a layout into someone else's slot.
+   */
+  saveLayout(
+    projectId: string,
+    layout: CanvasLayout,
+    viewport: Viewport,
+    now: number
+  ): SaveLayoutResult
+  /**
+   * Renames a layout and bumps its `updatedAt`. No-op for an unknown project or layout id, and
+   * for a name that is empty once trimmed.
+   *
+   * Void where `saveLayout` reports, because every refusal here is one the call site can test for
+   * itself before calling - it knows the name it typed and the id it picked, so a return value
+   * would tell it nothing it did not already have.
+   */
+  renameLayout(projectId: string, layoutId: string, name: string, now: number): void
+  /** Deletes a layout AND this machine's camera for it. Both halves move together: a camera keyed
+   *  to a layout nobody can restore is litter in a file that is forever, the rule
+   *  `pruneCollapsedItems` states for `settings.sidebarCollapsedItems`. */
+  deleteLayout(projectId: string, layoutId: string): void
+  /** Records this machine's camera for a layout without touching the shared half - where I was
+   *  looking after a restore is a fact about this screen, and writing it into
+   *  `.nodeterm/project.json` would move everyone else's canvas. An unknown layout id is refused
+   *  rather than answered with a stub, for the same reason `deleteLayout` prunes. */
+  recordLayoutViewport(projectId: string, layoutId: string, viewport: Viewport): void
 
   /**
    * Registers (or finds) the project for a local directory WITHOUT activating it — the store half
@@ -676,6 +730,95 @@ export const useProjects = create<ProjectsState>((set, get) => ({
           : { ...p, closedSessions: p.closedSessions.filter((e) => e.id !== entryId) }
       )
     }))
+  },
+
+  saveLayout(projectId, layout, viewport, now) {
+    // The dialog validates too, but the command palette reaches this action directly, so the
+    // store is the last gate before a name lands in a git-shared file.
+    const name = layout.name.trim().slice(0, CANVAS_LAYOUT_NAME_MAX)
+    if (!name) return 'invalid-name'
+    const project = get().projects.find((p) => p.id === projectId)
+    if (!project) return 'unknown-project'
+    const layouts = project.layouts ?? []
+    const idx = layouts.findIndex((l) => l.id === layout.id)
+    // Replace-by-id never counts against the cap. A genuinely new layout past it is refused rather
+    // than evicting the oldest: the list is shared, so the entry dropped to make room could be a
+    // teammate's, and losing their work to make one Save succeed is worse than a Save that says no.
+    if (idx === -1 && layouts.length >= CANVAS_LAYOUTS_CAP) return 'cap-reached'
+    const stored: CanvasLayout = {
+      ...layout,
+      name,
+      // A replace keeps the original creation moment: it is still the layout the user made that
+      // day, whatever the caller stamped on the snapshot it has just rebuilt.
+      createdAt: idx === -1 ? now : layouts[idx].createdAt,
+      updatedAt: now
+    }
+    const next = idx === -1 ? [...layouts, stored] : layouts.map((l, i) => (i === idx ? stored : l))
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id !== projectId
+          ? p
+          : {
+              ...p,
+              layouts: next,
+              layoutViewports: { ...(p.layoutViewports ?? {}), [stored.id]: viewport }
+            }
+      )
+    }))
+    // Saving a layout touches no node, so no canvas edit will schedule the write for us - the same
+    // persistence gap the capability setters close.
+    markWorkspaceDirty()
+    return 'saved'
+  },
+
+  renameLayout(projectId, layoutId, name, now) {
+    const clean = name.trim().slice(0, CANVAS_LAYOUT_NAME_MAX)
+    if (!clean) return
+    let changed = false
+    set((s) => ({
+      projects: s.projects.map((p) => {
+        if (p.id !== projectId || !p.layouts?.some((l) => l.id === layoutId)) return p
+        changed = true
+        return {
+          ...p,
+          layouts: p.layouts.map((l) =>
+            l.id === layoutId ? { ...l, name: clean, updatedAt: now } : l
+          )
+        }
+      })
+    }))
+    if (changed) markWorkspaceDirty()
+  },
+
+  deleteLayout(projectId, layoutId) {
+    let changed = false
+    set((s) => ({
+      projects: s.projects.map((p) => {
+        if (p.id !== projectId || !p.layouts?.some((l) => l.id === layoutId)) return p
+        changed = true
+        const layouts = p.layouts.filter((l) => l.id !== layoutId)
+        // Both halves move together, and the shared pruner is what decides which cameras survive
+        // so the store cannot grow a second opinion about it.
+        return {
+          ...p,
+          layouts: layouts.length ? layouts : undefined,
+          layoutViewports: pruneLayoutViewports(p.layoutViewports, layouts)
+        }
+      })
+    }))
+    if (changed) markWorkspaceDirty()
+  },
+
+  recordLayoutViewport(projectId, layoutId, viewport) {
+    let changed = false
+    set((s) => ({
+      projects: s.projects.map((p) => {
+        if (p.id !== projectId || !p.layouts?.some((l) => l.id === layoutId)) return p
+        changed = true
+        return { ...p, layoutViewports: { ...(p.layoutViewports ?? {}), [layoutId]: viewport } }
+      })
+    }))
+    if (changed) markWorkspaceDirty()
   },
 
   reopenProject(id) {

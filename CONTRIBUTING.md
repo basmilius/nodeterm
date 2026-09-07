@@ -379,6 +379,13 @@ from the target's `pendingLaunch` (`renderer/lib/edgeModel.ts`), and the context
 writes stays hidden underneath it. One `open-claude --after` used to land three edges on one node.
 `src/renderer/canvas/edge-model.source.test.ts` pins both halves.
 
+**A canvas layout is GEOMETRY, and its two halves live in different files.** A saved layout moves
+nodes and nothing else: it never creates, deletes, renames, reparents or respawns one, and never
+touches a tmux session. The snapshot itself (`Project.layouts`) is CONTENT and rides the git-shared
+`.nodeterm/project.json`, while this machine's camera per layout (`Project.layoutViewports`) is
+machine-local and rides `workspace.json` beside `viewport` and `breadcrumbs`. Restoring applies its
+camera with `setViewport`, per the `fitView` rule below.
+
 **React Flow's `fitView` is queued, not immediate — never use it to frame something automatically.**
 Calling it sets `fitViewQueued` and the fit runs from a later `setNodes` (only once every node is
 measured) or the next `updateNodeInternals`, against whatever the node lookup holds by then; a fit

@@ -461,6 +461,14 @@ import {
   stateToReopenSnapshot
 } from '../lib/closedHistory'
 import { uuid } from '../lib/uuid'
+import { CANVAS_LAYOUTS_CAP, findLayoutByName, type CanvasLayout } from '@shared/canvas-layout'
+import { applyLayout, captureLayout } from '../lib/canvasLayout'
+import {
+  layoutFramingViewport,
+  restoreSummary,
+  saveLayoutRefusal,
+  sortedLayouts
+} from '../lib/canvasLayoutView'
 import { planReopen, type ReopenPlan } from '../lib/reopenPlan'
 import { oneLine } from '@shared/one-line'
 import { invalidNodeColorMessage, isNodeColor } from '@shared/node-colors'
@@ -6713,6 +6721,168 @@ export function Canvas() {
     markDirty()
     fitAll()
   }, [setNodes, markDirty, fitAll])
+
+  /** Report a refusal the user cannot act on any other way. One dismiss button, no default. */
+  const alertLayout = useCallback(
+    (message: string) => {
+      setConfirm({ message, alert: true, onConfirm: () => setConfirm(null) })
+    },
+    [setConfirm]
+  )
+
+  /**
+   * Save the live canvas geometry as a named layout.
+   *
+   * The two halves land together (`saveLayout` writes the shared snapshot and this machine's camera
+   * in ONE store update), and the name is asked for BEFORE anything is captured so a cancel costs
+   * nothing. A name that already exists offers to replace, reusing that layout's id: appending a
+   * second "Ultrawide" would leave the user with two rows they cannot tell apart, and the menu is
+   * sorted by name so they would sit on top of each other.
+   */
+  const saveCanvasLayout = useCallback(async () => {
+    const projectId = useProjects.getState().activeProjectId
+    if (!projectId) return
+    const typed = await promptDialog({
+      message: 'Name this layout',
+      placeholder: 'e.g. Ultrawide',
+      confirmLabel: 'Save'
+    })
+    if (typed === null) return
+    const name = typed.trim()
+    if (!name) {
+      alertLayout('A layout needs a name.')
+      return
+    }
+    const store = () => useProjects.getState()
+    const write = (id: string): void => {
+      const layout = captureLayout(nodesRef.current, {
+        id,
+        name,
+        now: Date.now(),
+        // The AUTHOR's window, kept as a label so they can tell the ultrawide arrangement from the
+        // laptop one. Never a matcher: the file travels, so nothing here selects a layout for you.
+        window: { width: window.innerWidth, height: window.innerHeight }
+      })
+      const refusal = saveLayoutRefusal(store().saveLayout(projectId, layout, getViewport(), Date.now()))
+      if (refusal) alertLayout(refusal)
+    }
+    // Re-read the project rather than closing over it: the dialog above is awaited, and a git pull
+    // or a teammate's save can land a layout with this name while it is open.
+    const existing = findLayoutByName(store().getProject(projectId)?.layouts, name)
+    if (!existing) {
+      write(uuid())
+      return
+    }
+    setConfirm({
+      message: `A layout named "${existing.name}" already exists. Replace it?`,
+      confirmLabel: 'Replace',
+      onConfirm: () => {
+        setConfirm(null)
+        write(existing.id)
+      }
+    })
+  }, [alertLayout, setConfirm, getViewport])
+
+  /**
+   * Put the canvas back the way a layout recorded it.
+   *
+   * No confirm, deliberately: this moves nodes and does nothing else - no session is touched, no
+   * node is created or deleted - and the debounced history effect picks the `setNodes` up, so ⌘Z
+   * takes it back.
+   *
+   * The camera is applied with `setViewport` and NEVER `fitView`, for the reason `frameNode`
+   * states at length: a fitView is QUEUED and resolves later against whatever is measured by then,
+   * which on a canvas that has just been rearranged is the origin jump. This machine's own camera
+   * for the layout wins; a layout restored here for the first time (a teammate's, or one saved on
+   * another machine) gets a camera derived from the layout's own rects instead.
+   */
+  const restoreCanvasLayout = useCallback(
+    (layout: CanvasLayout) => {
+      const projectId = useProjects.getState().activeProjectId
+      if (!projectId) return
+      const before = nodesRef.current
+      const result = applyLayout(before, layout)
+      // Same array back = the layout addressed nothing live. Marking dirty there would bump the
+      // project rev, and write a new revision of a shared file, for a canvas that did not move.
+      if (result.nodes !== before) {
+        setNodes(result.nodes)
+        markDirty()
+      }
+      const project = useProjects.getState().getProject(projectId)
+      const viewport = project?.layoutViewports?.[layout.id] ?? layoutFramingViewport(layout.nodes)
+      void setViewport(viewport, { duration: 300 })
+      // Machine-local, so this rewrites the index entry and not the shared project file: the next
+      // restore on THIS machine lands on the camera the user is looking at now.
+      useProjects.getState().recordLayoutViewport(projectId, layout.id, viewport)
+      setNotice({ kind: 'info', text: restoreSummary(layout.name, result) })
+    },
+    [setNodes, markDirty, setViewport]
+  )
+
+  /**
+   * Rename a layout.
+   *
+   * A name another layout already holds is REFUSED rather than offered as a replace. Replacing on
+   * save overwrites the snapshot the user is looking at, which is what they asked for; replacing on
+   * rename would DELETE a different layout the user never named in the gesture - a destructive act
+   * hiding inside an edit.
+   */
+  const renameCanvasLayout = useCallback(
+    async (layout: CanvasLayout) => {
+      const projectId = useProjects.getState().activeProjectId
+      if (!projectId) return
+      const typed = await promptDialog({
+        message: 'Rename layout',
+        initialValue: layout.name,
+        confirmLabel: 'Rename'
+      })
+      if (typed === null) return
+      const name = typed.trim()
+      if (!name) {
+        alertLayout('A layout needs a name.')
+        return
+      }
+      const clash = findLayoutByName(useProjects.getState().getProject(projectId)?.layouts, name)
+      if (clash && clash.id !== layout.id) {
+        alertLayout(`Another layout is already called "${clash.name}". Pick a different name.`)
+        return
+      }
+      useProjects.getState().renameLayout(projectId, layout.id, name, Date.now())
+    },
+    [alertLayout]
+  )
+
+  /**
+   * Delete a layout. Confirmed because it is the one action here that cannot be undone - a restore
+   * only moves nodes, and this drops the arrangement itself.
+   *
+   * A project with a folder says so in the dialog: `layouts` rides the git-shared
+   * `.nodeterm/project.json`, so the delete reaches everyone on their next pull.
+   */
+  const deleteCanvasLayout = useCallback(
+    (layout: CanvasLayout) => {
+      const projectId = useProjects.getState().activeProjectId
+      if (!projectId) return
+      // A layout is CONTENT, so it lives in the project's own .nodeterm/project.json wherever that
+      // file is: in the repo for a folder project, on the host for an SSH one. Both are shared with
+      // whoever else opens that project, so both get the sentence. Only a cwd-less canvas keeps its
+      // file inside this machine's userData and is genuinely nobody else's.
+      const project = useProjects.getState().getProject(projectId)
+      const shared = !!(project?.cwd || project?.ssh)
+      setConfirm({
+        message: shared
+          ? `Delete the layout "${layout.name}"? It is shared with the project, so it goes for everyone who opens it. This cannot be undone.`
+          : `Delete the layout "${layout.name}"? This cannot be undone.`,
+        confirmLabel: 'Delete',
+        danger: true,
+        onConfirm: () => {
+          setConfirm(null)
+          useProjects.getState().deleteLayout(projectId, layout.id)
+        }
+      })
+    },
+    [setConfirm]
+  )
 
   const toggleCollapseNodes = useCallback(
     (ids: string[]) => {
@@ -13081,6 +13251,30 @@ export function Canvas() {
           ]
         : []),
       { id: 'zoom-100', label: 'Zoom to 100%', icon: <IconFit />, run: zoomTo100 },
+      // Layouts mirror the Dock's menu, and both are withheld on a relay tab for the same reason:
+      // it is a live connection to another machine, never a workspace on this disk. The Dock says
+      // so on a disabled button; the palette has no disabled row, so the entries are omitted.
+      ...(activeProject?.remote
+        ? []
+        : [
+            {
+              id: 'save-layout',
+              label: 'Save canvas layout…',
+              hint: 'arrangement snapshot monitor screen restore',
+              section: 'View',
+              icon: <IconCanvasView />,
+              run: () => void saveCanvasLayout()
+            } satisfies Command,
+            ...sortedLayouts(activeProject?.layouts).map(
+              (layout): Command => ({
+                id: `restore-layout-${layout.id}`,
+                label: `Restore layout: ${layout.name}`,
+                section: 'View',
+                icon: <IconCanvasView />,
+                run: () => restoreCanvasLayout(layout)
+              })
+            )
+          ]),
       { id: 'save', label: 'Save', icon: <IconSave />, run: () => void persist() },
       // Hidden when the canvas has no restartable agent node — the row would have nothing to act
       // on. `hint` is searchable, so "new model" / "update" find it too.
@@ -13188,6 +13382,8 @@ export function Canvas() {
     zoomTo100,
     arrangeAllNodes,
     hasArrangeableNodes,
+    saveCanvasLayout,
+    restoreCanvasLayout,
     toggleFocusMode
   ])
 
@@ -14232,6 +14428,10 @@ export function Canvas() {
         onAddWorktree={() => openWorktreeDialog(null)}
         onSave={persist}
         onFitView={fitAll}
+        onSaveLayout={() => void saveCanvasLayout()}
+        onRestoreLayout={restoreCanvasLayout}
+        onRenameLayout={(layout) => void renameCanvasLayout(layout)}
+        onDeleteLayout={deleteCanvasLayout}
         onZoomIn={() => zoomIn({ duration: ZOOM_STEP_DURATION_MS })}
         onZoomOut={() => zoomOut({ duration: ZOOM_STEP_DURATION_MS })}
         onZoomTo={zoomToPct}
