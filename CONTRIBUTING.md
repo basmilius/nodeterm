@@ -125,6 +125,18 @@ lane unaffected.
   see. Keep a remote temp's own leaf bounded: extending an already-valid maximum-length target leaf
   with a UUID suffix turns an atomic write into a guaranteed `ENAMETOOLONG` failure.
 
+- **A write ack is a claim about a WRITE, never about what the remote now holds.** Do not retire
+  state that records "the server still needs to be told X" just because the write returned true.
+  The SSH mirror's writer acks the 5 s throttle's trailing write **optimistically** — it returns
+  true and schedules the run — so a connection that dies inside that window leaves an ack behind
+  with nothing on the wire. Deleting the deletion tombstones on that ack is how 16 terminals
+  deleted on a slow link came back, announced as sessions from a phone the reporter does not own
+  (`clearedNodes` / `confirmClearedDeletions`, `src/core/workspace-store.ts`). Retire such state on
+  a READ that shows the remote no longer has it — which is the same rule this codebase already
+  applies in the other direction, "a failed read is never evidence of absence". And when you cannot
+  observe where incoming data came from, **do not name a source in the UI copy**: a wrong
+  attribution sends the reader hunting for a device instead of at the file.
+
 - **Never write to a child's stdin without an `'error'` listener on that stream.** A pipe write's
   failure is not a throw at the call site: when the child exits before draining stdin (a CLI handed
   a flag it doesn't know, an unreachable ssh host), Node re-emits the EPIPE as an async `'error'`

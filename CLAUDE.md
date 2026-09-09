@@ -344,6 +344,30 @@ Persistence has two layers:
   `refreshSshProject` runs ON `saveChain`: off the chain a poll snapshotting the pre-save entry
   could complete its slow ssh read after the save's mirror landed and "adopt" the store's own
   write on rev alone.
+  **A write ACK is not evidence about the server's CONTENT — only a read is** (2026-09-06 field
+  report: 16 terminals deleted on an SSH project came straight back, announced as sessions
+  registered from a phone the reporter does not own). `clearedNodes` is the tombstone set that
+  tells the mirror's re-read "we deleted this, do not rescue it back", and it used to be dropped
+  the moment `remoteIO.write` returned true. That ack is **optimistic for the 5 s throttle's
+  trailing write** (`makeRemoteWorkspaceIO` returns true and schedules the run) — so when the
+  connection died inside the window, `markUnmirrored` re-owed the mirror (`unmirrored.add`) while
+  the tombstones were already gone, and the retry's re-read found every just-deleted node still on
+  the server with nothing left to filter with: `rescueRemoteNodes` merged all 16 back into the
+  cache, bumped the rev and broadcast them as an external change. The asymmetry was in one place —
+  `unmirrored` was restored, `clearedNodes` was not. A tombstone is now retired ONLY by
+  `confirmClearedDeletions`: a read that no longer lists the id (taken from reads the store already
+  makes — the mirror's own re-read and `reconcileSsh` — so it costs no round-trip), or an adopt,
+  which overrules our deletions outright. **Both** read sites must call it; wiring one leaves the
+  other's tombstones alive for the whole run. The cost is that GC lags a landed write by one read,
+  which only prolongs the suppression of a rescue we do not want; the benefit is that the rule no
+  longer depends on a dropped write being REPORTED. Symmetrically restoring the set inside
+  `markUnmirrored` was the smaller diff and was rejected: it needs the same shadow state anyway,
+  and it only closes the one failure path that happens to report back. The set is runtime-only,
+  bounded by the ids deleted this run, and pruned for projects that leave the index.
+  **Neither surface may name a device for an adopted node** (`adoptedClause`,
+  `renderer/lib/externalChange.ts`): nothing at that layer knows the source — a stale own mirror
+  and a phone append are indistinguishable there — so the copy names the project FILE and offers
+  the possibilities without asserting one.
 - **Live terminal sessions** (tmux): terminals continue where they left off across node
   remounts *and* full app restarts, including running processes. See below.
 
